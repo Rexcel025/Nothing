@@ -8,3 +8,4 @@ if __name__ == "__main__":
     initialize_db()
     login_screen()
 
+#test
