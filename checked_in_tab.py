@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from database import connect_db
 
@@ -10,7 +11,7 @@ def show_checked_in_tab(main_area):
     tk.Label(main_area, text="Checked-In Customers", font=("Arial", 16)).pack(pady=10)
 
     tree = ttk.Treeview(main_area, columns=(
-        "ID", "Date", "Room", "Name", "Check-In", "Check-Out", "Status", "Current Status"), show="headings")
+        "ID", "Date", "Room", "Name", "Check-In", "Check-Out", "Check-Out Date", "Status", "Total Cost", "Current Status"), show="headings")
 
     for col in tree["columns"]:
         tree.heading(col, text=col)
@@ -31,25 +32,96 @@ def show_checked_in_tab(main_area):
         for row in rows:
             try:
                 check_in_dt = datetime.strptime(f"{row[1]} {row[4]}", "%Y-%m-%d %H:%M")
-                check_out_dt = datetime.strptime(f"{row[1]} {row[5]}", "%Y-%m-%d %H:%M")
-
-                # If checkout is earlier than check-in, assume it's the next day
-                if check_out_dt < check_in_dt:
-                    check_out_dt += timedelta(days=1)
-
+                check_out_dt = datetime.strptime(f"{row[6]} {row[5]}", "%Y-%m-%d %H:%M")
                 current_status = "Overstayed" if now > check_out_dt else "Checked In"
             except Exception as e:
-                current_status = "Invalid Time"
+                current_status = f"Invalid Time: {e}"
 
-            tree.insert("", "end", values=(*row, current_status))
+            total_cost = f"₱{row[8]:.2f}" if row[8] is not None else "₱0.00"
+            tree.insert("", "end", values=(
+                row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], total_cost, current_status))
 
-    def check_out_selected():
+    load_checked_in_data()
+
+    def extend_selected():
         selected = tree.selection()
         if not selected:
-            messagebox.showwarning("No Selection", "Select a customer to check out.")
+            messagebox.showwarning("No Selection", "Select a booking to extend.")
             return
 
-        booking_id = tree.item(selected[0])["values"][0]
+        values = tree.item(selected[0])["values"]
+
+        extend_window = tk.Toplevel()
+        extend_window.title("Extend Booking")
+
+        tk.Label(extend_window, text="New Check-Out Date:").pack(pady=5)
+        date_entry = DateEntry(extend_window, date_pattern='yyyy-mm-dd')
+        date_entry.set_date(values[6])
+        date_entry.pack(pady=5)
+
+        tk.Label(extend_window, text="New Check-Out Time (HH:MM):").pack(pady=5)
+        time_entry = tk.Entry(extend_window)
+        time_entry.insert(0, values[5])
+        time_entry.pack(pady=5)
+
+        def save_new_time():
+            new_date = date_entry.get_date().strftime("%Y-%m-%d")
+            new_time = time_entry.get()
+
+            try:
+                datetime.strptime(new_time, "%H:%M")
+            except ValueError:
+                messagebox.showerror("Invalid Time", "Time must be in HH:MM format.")
+                return
+
+            conn = connect_db()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT checkin_time, date, room_no FROM bookings WHERE id = ?", (values[0],))
+            checkin_time, checkin_date, room_no = cursor.fetchone()
+
+            checkin_dt = datetime.strptime(f"{checkin_date} {checkin_time}", "%Y-%m-%d %H:%M")
+            new_checkout_dt = datetime.strptime(f"{new_date} {new_time}", "%Y-%m-%d %H:%M")
+            if new_checkout_dt <= checkin_dt:
+                messagebox.showerror("Invalid", "New checkout must be after check-in.")
+                conn.close()
+                return
+
+            cursor.execute("SELECT base_price FROM room_prices WHERE room_no = ?", (room_no,))
+            base_price = cursor.fetchone()[0]
+
+            duration_hours = (new_checkout_dt - checkin_dt).total_seconds() / 3600
+            if duration_hours <= 3:
+                total_cost = base_price
+            else:
+                extra_hours = duration_hours - 3
+                total_cost = base_price + (extra_hours * (base_price / 3))
+
+            cursor.execute("""
+                UPDATE bookings SET checkout_time = ?, checkout_date = ?, total_cost = ?
+                WHERE id = ?
+            """, (new_time, new_date, total_cost, values[0]))
+            conn.commit()
+            conn.close()
+
+            extend_window.destroy()
+            load_checked_in_data()
+            messagebox.showinfo("Success", f"Booking extended. New total cost: ₱{int(total_cost)}")
+
+        tk.Button(extend_window, text="Save", command=save_new_time).pack(pady=10)
+
+    def checkout_selected():
+        selected = tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Select a booking to check out.")
+            return
+
+        values = tree.item(selected[0])["values"]
+        booking_id = values[0]
+
+        confirm = messagebox.askyesno("Confirm Check-Out", "Are you sure you want to check out this booking?")
+        if not confirm:
+            return
 
         conn = connect_db()
         cursor = conn.cursor()
@@ -57,77 +129,14 @@ def show_checked_in_tab(main_area):
         conn.commit()
         conn.close()
 
-        messagebox.showinfo("Success", "Customer has been checked out.")
         load_checked_in_data()
-
-    def extend_selected():
-        selected = tree.selection()
-        if not selected:
-            messagebox.showwarning("No Selection", "Select a customer to extend.")
-            return
-
-        values = tree.item(selected[0])["values"]
-        booking_id = values[0]
-        current_checkout = values[5]
-
-        # Split current time for default dropdown values
-        try:
-            hour, minute = current_checkout.split(":")
-        except ValueError:
-            hour, minute = "12", "00"
-
-        extend_window = tk.Toplevel()
-        extend_window.title("Extend Booking")
-
-        tk.Label(extend_window, text="New Check-Out Time:").pack(pady=5)
-
-        time_frame = tk.Frame(extend_window)
-        time_frame.pack(pady=5)
-
-        hour_var = tk.StringVar()
-        minute_var = tk.StringVar()
-
-        hour_combo = ttk.Combobox(time_frame, textvariable=hour_var, values=[f"{h:02d}" for h in range(24)], width=3)
-        hour_combo.set(hour)
-        hour_combo.pack(side="left")
-
-        tk.Label(time_frame, text=":").pack(side="left")
-
-        minute_combo = ttk.Combobox(time_frame, textvariable=minute_var, values=[f"{m:02d}" for m in range(0, 60, 5)], width=3)
-        minute_combo.set(minute)
-        minute_combo.pack(side="left")
-
-        def save_new_time():
-            new_hour = hour_var.get()
-            new_minute = minute_var.get()
-
-            if not new_hour or not new_minute:
-                messagebox.showerror("Invalid", "Please select both hour and minute.")
-                return
-
-            new_time = f"{new_hour}:{new_minute}"
-
-            try:
-                datetime.strptime(new_time, "%H:%M")
-            except ValueError:
-                messagebox.showerror("Invalid", "Enter time in HH:MM format.")
-                return
-
-            conn = connect_db()
-            cursor = conn.cursor()
-            cursor.execute("UPDATE bookings SET checkout_time = ? WHERE id = ?", (new_time, booking_id))
-            conn.commit()
-            conn.close()
-            extend_window.destroy()
-            load_checked_in_data()
-            messagebox.showinfo("Success", "Checkout time updated.")
-
-        tk.Button(extend_window, text="Save", command=save_new_time).pack(pady=10)
+        messagebox.showinfo("Checked Out", "The booking has been checked out successfully.")
 
     button_frame = tk.Frame(main_area)
     button_frame.pack(pady=10)
 
-    tk.Button(button_frame, text="Check Out Selected", command=check_out_selected).pack(side="left", padx=10)
-    tk.Button(button_frame, text="Extend Selected", command=extend_selected).pack(side="left", padx=10)
+    tk.Button(button_frame, text="Extend Booking", command=extend_selected).pack(side="left", padx=5)
+    tk.Button(button_frame, text="Check Out", command=checkout_selected).pack(side="left", padx=5)
 
-    load_checked_in_data()
+def reload_checked_in_data(main_area):
+    show_checked_in_tab(main_area)

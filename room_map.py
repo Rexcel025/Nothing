@@ -7,8 +7,15 @@ status_colors = {
     "reserved": "#f1c40f",   # yellow
 }
 
-# List of all rooms you want to display
-all_rooms = ["101", "102", "103", "104", "105", "106"]
+def get_all_rooms_from_db():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT room_no FROM room_prices")
+    rows = cursor.fetchall()
+    conn.close()
+    return [str(row[0]) for row in rows]  # ensure room_no is string
+
+all_rooms = get_all_rooms_from_db()
 
 def get_room_statuses_for_date(date):
     conn = connect_db()
@@ -17,7 +24,6 @@ def get_room_statuses_for_date(date):
     records = cursor.fetchall()
     conn.close()
 
-    # Default all rooms to vacant
     room_status = {room: "vacant" for room in all_rooms}
 
     for room_no, status in records:
@@ -31,8 +37,15 @@ def show_room_map(main_area, selected_date, on_room_click):
 
     tk.Label(main_area, text=f"Room Map - {selected_date}", font=("Arial", 16)).pack(pady=10)
 
-    # Fetch live statuses from DB
     room_status_data = get_room_statuses_for_date(selected_date)
+
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT room_no, base_price FROM room_prices")
+    price_records = cursor.fetchall()
+    conn.close()
+
+    room_prices = {str(room): price for room, price in price_records}
 
     grid_frame = tk.Frame(main_area)
     grid_frame.pack(pady=10)
@@ -42,14 +55,18 @@ def show_room_map(main_area, selected_date, on_room_click):
 
     for idx, room_no in enumerate(all_rooms):
         status = room_status_data.get(room_no, "vacant")
-        color = status_colors.get(status, "#bdc3c7")  # fallback to gray
+        color = status_colors.get(status, "#bdc3c7")
+
+        price = room_prices.get(room_no, "N/A")
+
+        btn_text = f"Room {room_no}\n({status})\n₱{price}"
 
         btn = tk.Button(
             grid_frame,
-            text=f"Room {room_no}\n({status})",
+            text=btn_text,
             bg=color,
             width=15,
-            height=4,
+            height=5,
             command=lambda rn=room_no: on_room_click(selected_date, rn, refresh_map)
         )
         btn.grid(row=idx // 3, column=idx % 3, padx=10, pady=10)

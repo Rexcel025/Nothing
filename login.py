@@ -19,7 +19,7 @@ def login_screen():
 
             if user[3] == "admin":
                 show_register_button()
-            # In future: load_dashboard(user[3])
+
         else:
             messagebox.showerror("Login Failed", "Wrong username or password.")
 
@@ -39,7 +39,7 @@ def login_screen():
 
     tk.Button(root, text="Login", command=handle_login).grid(row=2, columnspan=2, pady=5)
 
-    btn_register = tk.Button(root, text="Register New User", command=show_register, state=tk.NORMAL)
+    btn_register = tk.Button(root, text="Register New User", command=show_register, state=tk.DISABLED)
     btn_register.grid(row=3, columnspan=2, pady=5)
 
     root.mainloop()
