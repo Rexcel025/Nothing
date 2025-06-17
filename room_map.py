@@ -15,9 +15,8 @@ def get_all_rooms_from_db():
     conn.close()
     return [str(row[0]) for row in rows]  # ensure room_no is string
 
-all_rooms = get_all_rooms_from_db()
-
 def get_room_statuses_for_date(date):
+    all_rooms = get_all_rooms_from_db()  # Fetch fresh list every time
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("SELECT room_no, status FROM bookings WHERE date = ?", (date,))
@@ -29,7 +28,7 @@ def get_room_statuses_for_date(date):
     for room_no, status in records:
         room_status[room_no] = status.lower()
 
-    return room_status
+    return room_status, all_rooms  # Return both status dict and fresh room list
 
 def show_room_map(main_area, selected_date, on_room_click):
     for widget in main_area.winfo_children():
@@ -37,7 +36,7 @@ def show_room_map(main_area, selected_date, on_room_click):
 
     tk.Label(main_area, text=f"Room Map - {selected_date}", font=("Arial", 16)).pack(pady=10)
 
-    room_status_data = get_room_statuses_for_date(selected_date)
+    room_status_data, all_rooms = get_room_statuses_for_date(selected_date)  # Get fresh rooms every time
 
     conn = connect_db()
     cursor = conn.cursor()

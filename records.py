@@ -9,7 +9,7 @@ def show_records_tab(main_area, user_role):
 
     tk.Label(main_area, text="Booking Records", font=("Arial", 16)).pack(pady=10)
 
-    columns = ("ID", "Date", "Room", "Name", "Check-In Time", "Check-Out Date", "Check-Out Time", "Status", "Total Cost", "Current Status")
+    columns = ("ID", "Date", "Room", "Name", "Check-In Time", "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Current Status")
     tree = ttk.Treeview(main_area, columns=columns, show="headings", height=10)
 
     for col in columns:

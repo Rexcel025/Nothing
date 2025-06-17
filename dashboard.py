@@ -5,6 +5,8 @@ from records import show_records_tab
 from checked_in_tab import show_checked_in_tab
 from product_management import show_product_management
 from register import show_register_in_main_area  
+from room_management import show_room_management  
+
 import tkinter as tk
 from tkinter import messagebox
 
@@ -51,8 +53,10 @@ def open_dashboard(role):
     add_sidebar_button("Checked-In Customers", lambda: show_checked_in_tab(main_area))
 
     if role == "admin":
-        add_sidebar_button("Register New User", lambda: show_register_in_main_area(main_area))  # Inline register view
+        add_sidebar_button("Register New User", lambda: show_register_in_main_area(main_area))
         add_sidebar_button("Product Management", lambda: show_product_management(main_area))
+        add_sidebar_button("Room Management", lambda: show_room_management(main_area))  
+
 
     # Logout Button at the bottom
     tk.Button(sidebar, text="Logout", fg="red", width=25, pady=5, command=dashboard.destroy).pack(side="bottom", pady=10)

@@ -215,3 +215,37 @@ def update_booking_total_cost(booking_id, total_cost):
     """, (total_cost, booking_id))
     conn.commit()
     conn.close()
+
+def add_room(room_no, base_price):
+    conn = connect_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO room_prices (room_no, base_price)
+            VALUES (?, ?)
+        """, (room_no, base_price))
+        conn.commit()
+        success = True
+    except sqlite3.IntegrityError:
+        success = False
+    conn.close()
+    return success
+
+def remove_room(room_no):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM room_prices WHERE room_no = ?
+    """, (room_no,))
+    conn.commit()
+    conn.close()
+
+def update_room_price(room_no, new_base_price):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE room_prices SET base_price = ?
+        WHERE room_no = ?
+    """, (new_base_price, room_no))
+    conn.commit()
+    conn.close()
