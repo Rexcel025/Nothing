@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import connect_db, get_all_products
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def show_records_tab(main_area, user_role):
     for widget in main_area.winfo_children():
@@ -9,7 +9,32 @@ def show_records_tab(main_area, user_role):
 
     tk.Label(main_area, text="Booking Records", font=("Arial", 16)).pack(pady=10)
 
-    columns = ("ID", "Date", "Room", "Name", "Check-In Time", "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Current Status")
+    date_frame = tk.Frame(main_area)
+    date_frame.pack()
+
+    selected_date = [datetime.now().date()]
+
+    def update_date_label():
+        date_label.config(text=f"Date: {selected_date[0]}")
+
+    def prev_day():
+        selected_date[0] -= timedelta(days=1)
+        load_data()
+
+    def next_day():
+        selected_date[0] += timedelta(days=1)
+        load_data()
+
+    prev_btn = tk.Button(date_frame, text="< Previous", command=prev_day)
+    prev_btn.pack(side="left", padx=5)
+
+    date_label = tk.Label(date_frame, text="")
+    date_label.pack(side="left", padx=5)
+
+    next_btn = tk.Button(date_frame, text="Next >", command=next_day)
+    next_btn.pack(side="left", padx=5)
+
+    columns = ("ID", "Date", "Room", "Name", "Check-In Time", "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Encoded By")
     tree = ttk.Treeview(main_area, columns=columns, show="headings", height=10)
 
     for col in columns:
@@ -18,7 +43,9 @@ def show_records_tab(main_area, user_role):
 
     tree.pack(expand=True, fill="both", padx=10, pady=5)
 
-    # Products details section
+    summary_label = tk.Label(main_area, text="")
+    summary_label.pack(pady=5)
+
     details_frame = tk.LabelFrame(main_area, text="Products Availed")
     details_frame.pack(fill="x", padx=10, pady=5)
 
@@ -48,26 +75,26 @@ def show_records_tab(main_area, user_role):
     def load_data():
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM bookings")
+        cursor.execute("""
+            SELECT b.id, b.date, b.room_no, b.customer_name, b.checkin_time,
+                   b.checkout_date, b.checkout_time, b.status, b.total_cost, u.username
+            FROM bookings b
+            LEFT JOIN users u ON b.encoded_by = u.id
+            WHERE b.date = ?
+        """, (selected_date[0].strftime('%Y-%m-%d'),))
         bookings = cursor.fetchall()
         conn.close()
 
         tree.delete(*tree.get_children())
-        now = datetime.now()
+        total_income = 0
+        total_bookings = len(bookings)
 
         for booking in bookings:
-            # Corrected: Unpack 9 columns only (as per database structure)
-            booking_id, date, room_no, name, checkin_time, checkout_date, checkout_time, status, total_cost = booking
+            total_income += booking[8]
+            tree.insert("", "end", values=booking)
 
-            try:
-                checkout_dt = datetime.strptime(f"{checkout_date} {checkout_time}", "%Y-%m-%d %H:%M")
-            except ValueError:
-                checkout_dt = now  # fallback if invalid datetime
-
-            status_now = "Checked Out" if status == "vacant" else ("Overstayed" if now > checkout_dt else "Checked In")
-
-            # Corrected: Ensure the number of values matches the defined Treeview columns
-            tree.insert("", "end", values=(booking_id, date, room_no, name, checkin_time, checkout_date, checkout_time, status, total_cost, status_now))
+        summary_label.config(text=f"Total Bookings: {total_bookings} | Total Income: ₱{total_income:.2f}")
+        update_date_label()
 
     def show_product_details(event):
         selected = tree.selection()
