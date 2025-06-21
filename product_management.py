@@ -1,83 +1,130 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
+    QTableWidget, QTableWidgetItem, QDialog, QLineEdit, QMessageBox
+)
+from PyQt5.QtCore import Qt
 from database import connect_db
 
-def show_product_management(main_area):
-    for widget in main_area.winfo_children():
-        widget.destroy()
 
-    tk.Label(main_area, text="Product Management", font=("Arial", 16)).pack(pady=10)
+class ProductManagement(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
 
-    # Treeview
-    tree = ttk.Treeview(main_area, columns=("ID", "Name", "Price"), show="headings")
-    for col in ("ID", "Name", "Price"):
-        tree.heading(col, text=col)
-        tree.column(col, anchor="center", width=100)
-    tree.pack(expand=True, fill="both", padx=10, pady=5)
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
 
-    def load_products():
+        title = QLabel("Product Management")
+        title.setStyleSheet("font-size: 18pt; font-weight: bold; margin: 10px;")
+        title.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(title)
+
+        # Product Table
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["ID", "Name", "Price"])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setStyleSheet("""
+            QTableWidget {
+                background-color: #2b2b2b;
+                color: #f0f0f0;
+                gridline-color: #444;
+                border: 1px solid #444;
+            }
+            QHeaderView::section {
+                background-color: #444;
+                color: #f0f0f0;
+                padding: 4px;
+                border: 1px solid #666;
+            }
+            QTableWidget::item {
+                selection-background-color: #555;
+                selection-color: #ffffff;
+            }
+        """)
+
+        main_layout.addWidget(self.table)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        add_button = QPushButton("Add Product")
+        add_button.clicked.connect(self.add_product_dialog)
+        delete_button = QPushButton("Delete Product")
+        delete_button.clicked.connect(self.delete_product)
+        button_layout.addWidget(add_button)
+        button_layout.addWidget(delete_button)
+        main_layout.addLayout(button_layout)
+
+        self.load_products()
+
+    def load_products(self):
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM products")
-        rows = cursor.fetchall()
+        products = cursor.fetchall()
         conn.close()
 
-        tree.delete(*tree.get_children())
-        for row in rows:
-            tree.insert("", "end", values=row)
+        self.table.setRowCount(0)
+        for row_data in products:
+            row_index = self.table.rowCount()
+            self.table.insertRow(row_index)
+            for col_index, data in enumerate(row_data):
+                self.table.setItem(row_index, col_index, QTableWidgetItem(str(data)))
 
-    def add_product():
-        def save_product():
-            name = name_entry.get()
-            try:
-                price = float(price_entry.get())
-            except ValueError:
-                messagebox.showerror("Invalid", "Price must be a number.")
-                return
+    def add_product_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Product")
+        layout = QVBoxLayout(dialog)
 
-            if not name:
-                messagebox.showerror("Error", "Name cannot be empty.")
-                return
+        name_input = QLineEdit()
+        price_input = QLineEdit()
 
-            conn = connect_db()
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
-            conn.commit()
-            conn.close()
-            add_win.destroy()
-            load_products()
+        layout.addWidget(QLabel("Product Name:"))
+        layout.addWidget(name_input)
+        layout.addWidget(QLabel("Price:"))
+        layout.addWidget(price_input)
 
-        add_win = tk.Toplevel()
-        add_win.title("Add Product")
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(lambda: self.save_product(dialog, name_input.text(), price_input.text()))
+        layout.addWidget(save_btn)
 
-        tk.Label(add_win, text="Product Name:").pack(pady=5)
-        name_entry = tk.Entry(add_win)
-        name_entry.pack(pady=5)
+        dialog.exec_()
 
-        tk.Label(add_win, text="Price:").pack(pady=5)
-        price_entry = tk.Entry(add_win)
-        price_entry.pack(pady=5)
-
-        tk.Button(add_win, text="Save", command=save_product).pack(pady=10)
-
-    def delete_product():
-        selected = tree.selection()
-        if not selected:
-            messagebox.showwarning("No Selection", "Select a product to delete.")
+    def save_product(self, dialog, name, price):
+        if not name:
+            QMessageBox.warning(self, "Input Error", "Product name cannot be empty.")
             return
-
-        product_id = tree.item(selected[0])["values"][0]
+        try:
+            price = float(price)
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "Price must be a valid number.")
+            return
 
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+        cursor.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
         conn.commit()
         conn.close()
 
-        load_products()
+        dialog.accept()
+        self.load_products()
 
-    # Buttons
-    tk.Button(main_area, text="Add Product", command=add_product).pack(side="left", padx=10, pady=10)
-    tk.Button(main_area, text="Delete Product", command=delete_product).pack(side="left", padx=10, pady=10)
+    def delete_product(self):
+        selected = self.table.currentRow()
+        if selected == -1:
+            QMessageBox.warning(self, "Selection Error", "Please select a product to delete.")
+            return
 
-    load_products()
+        product_id = self.table.item(selected, 0).text()
+        confirm = QMessageBox.question(
+            self, "Confirm Deletion",
+            "Are you sure you want to delete this product?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if confirm == QMessageBox.Yes:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+            conn.commit()
+            conn.close()
+            self.load_products()

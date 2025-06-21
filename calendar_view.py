@@ -1,79 +1,66 @@
-import tkinter as tk
-import calendar
-from datetime import datetime
+from PyQt5.QtWidgets import QWidget, QLabel
+from PyQt5.QtCore import QDate, Qt
+from calendar_ui import Ui_CalendarViewWidget
 
-def show_calendar(main_area, on_day_selected):
-    # Clear the main area
-    for widget in main_area.winfo_children():
-        widget.destroy()
+class CalendarView(QWidget):
+    def __init__(self, on_day_selected_callback):
+        super().__init__()
+        self.ui = Ui_CalendarViewWidget()
+        self.ui.setupUi(self)
 
-    # State to hold the currently displayed month/year
-    state = {"year": datetime.now().year, "month": datetime.now().month}
+        self.on_day_selected_callback = on_day_selected_callback
 
-    def refresh_calendar():
-        # Clear calendar frame only
-        for widget in calendar_frame.winfo_children():
-            widget.destroy()
+        # Connect calendar click to callback
+        self.ui.calendarWidget.clicked.connect(self.handle_date_selected)
 
-        year = state["year"]
-        month = state["month"]
-        month_name = calendar.month_name[month]
-        header.config(text=f"{month_name} {year}")
+        # Calendar appearance settings for dark mode
 
-        # Day headers
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        for i, day in enumerate(days):
-            tk.Label(calendar_frame, text=day, font=("Arial", 12, "bold"), width=10).grid(row=0, column=i)
+        self.ui.calendarWidget.setGridVisible(True)
+        self.ui.calendarWidget.setVerticalHeaderFormat(self.ui.calendarWidget.NoVerticalHeader)
+        self.ui.calendarWidget.setHorizontalHeaderFormat(self.ui.calendarWidget.SingleLetterDayNames)
+        self.ui.calendarWidget.setStyleSheet("""
+            QCalendarWidget QAbstractItemView {
+                selection-background-color: #555;
+                background-color: #2b2b2b;
+                color: #f0f0f0;  /* Normal day number text color */
+            }
+            QCalendarWidget QWidget#qt_calendar_navigationbar { 
+                background-color: #333; 
+                color: #f0f0f0; 
+            }
+            QCalendarWidget QToolButton {
+                color: #f0f0f0;
+            }
+            QCalendarWidget QAbstractItemView:enabled {
+                color: #f0f0f0; /* prevents weekend red text */
+            }
+            QCalendarWidget QAbstractItemView:disabled {
+                color: #2b2b2b; /* hidden overflow days */
+            }
+        """)
 
-        # Calendar days
-        cal = calendar.Calendar(firstweekday=0)
-        row = 1
-        for week in cal.monthdayscalendar(year, month):
-            for col, day in enumerate(week):
-                if day == 0:
-                    continue
-                btn = tk.Button(
-                    calendar_frame,
-                    text=str(day),
-                    width=10,
-                    height=2,
-                    command=lambda d=day: on_day_selected(year, month, d)
-                )
-                btn.grid(row=row, column=col, padx=2, pady=2)
-            row += 1
 
-    def go_prev():
-        if state["month"] == 1:
-            state["month"] = 12
-            state["year"] -= 1
-        else:
-            state["month"] -= 1
-        refresh_calendar()
+        self.hide_overflow_days()
 
-    def go_next():
-        if state["month"] == 12:
-            state["month"] = 1
-            state["year"] += 1
-        else:
-            state["month"] += 1
-        refresh_calendar()
+        # when navigating to another month, refresh hidden overflow days
+        self.ui.calendarWidget.currentPageChanged.connect(lambda: self.hide_overflow_days())
 
-    # Header with month/year
-    header_frame = tk.Frame(main_area)
-    header_frame.pack(pady=10)
+    def handle_date_selected(self, qdate: QDate):
+        year = qdate.year()
+        month = qdate.month()
+        day = qdate.day()
+        print(f"Date clicked: {year}-{month:02d}-{day:02d}")
+        self.on_day_selected_callback(year, month, day)
 
-    prev_btn = tk.Button(header_frame, text="<< Prev", command=go_prev)
-    prev_btn.pack(side="left", padx=5)
-
-    header = tk.Label(header_frame, text="", font=("Arial", 18))
-    header.pack(side="left", padx=10)
-
-    next_btn = tk.Button(header_frame, text="Next >>", command=go_next)
-    next_btn.pack(side="left", padx=5)
-
-    # Calendar grid frame
-    calendar_frame = tk.Frame(main_area)
-    calendar_frame.pack()
-
-    # Initial render
-    refresh_calendar()
+    def hide_overflow_days(self):
+        view = self.ui.calendarWidget.findChild(QWidget, "qt_calendar_calendarview")
+        if view:
+            model = view.model()
+            this_month = self.ui.calendarWidget.monthShown()
+            for row in range(model.rowCount()):
+                for col in range(model.columnCount()):
+                    index = model.index(row, col)
+                    date = index.data(0)
+                    if isinstance(date, QDate):
+                        if date.month() != this_month:
+                            view.setIndexWidget(index, QLabel(""))  # Replaces overflow day with empty label

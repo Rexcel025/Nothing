@@ -1,71 +1,75 @@
-import tkinter as tk
-from database import connect_db
+from PyQt5.QtWidgets import QWidget, QPushButton, QSizePolicy
+from PyQt5.QtCore import Qt
+from room_map_ui import Ui_RoomMapWidget
+from database import get_room_statuses_for_date, connect_db
 
 status_colors = {
-    "vacant": "#2ecc71",     # green
-    "occupied": "#e74c3c",   # red
-    "reserved": "#f1c40f",   # yellow
+    "vacant": "background-color: #2ecc71;",
+    "occupied": "background-color: #e74c3c;",
+    "reserved": "background-color: #f1c40f;",
 }
 
-def get_all_rooms_from_db():
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT room_no FROM room_prices")
-    rows = cursor.fetchall()
-    conn.close()
-    return [str(row[0]) for row in rows]  # ensure room_no is string
+class RoomMap(QWidget):
+    def __init__(self, parent=None, date=None, on_room_click=None):
+        super().__init__(parent)
+        self.date = date
+        self.on_room_click = on_room_click
 
-def get_room_statuses_for_date(date):
-    all_rooms = get_all_rooms_from_db()  # Fetch fresh list every time
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT room_no, status FROM bookings WHERE date = ?", (date,))
-    records = cursor.fetchall()
-    conn.close()
+        self.ui = Ui_RoomMapWidget()
+        self.ui.setupUi(self)
 
-    room_status = {room: "vacant" for room in all_rooms}
+        # Reduce space and margins to make the UI tighter and better
+        self.ui.gridLayout.setSpacing(2)
+        self.ui.gridLayout.setContentsMargins(5, 5, 5, 5)
 
-    for room_no, status in records:
-        room_status[room_no] = status.lower()
 
-    return room_status, all_rooms  # Return both status dict and fresh room list
+        self.ui.titleLabel.setStyleSheet("""
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 2px;
+        """)
+        self.refresh_map()
 
-def show_room_map(main_area, selected_date, on_room_click):
-    for widget in main_area.winfo_children():
-        widget.destroy()
+    def refresh_map(self):
+        # Set the title label
+        self.ui.titleLabel.setText(f"Room Map - {self.date}")
 
-    tk.Label(main_area, text=f"Room Map - {selected_date}", font=("Arial", 16)).pack(pady=10)
+        # Fetch room statuses and prices
+        statuses, rooms = get_room_statuses_for_date(self.date)
+        prices = self.get_room_prices()
+        print("Statuses:", statuses)  # 👈 check what statuses dict contains
+        print("Rooms:", rooms)        # 👈 check what room list contains
+        print("Prices:", prices)      # 👈 check room prices
+        # Clear existing buttons in the grid layout
+        while self.ui.gridLayout.count():
+            child = self.ui.gridLayout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
-    room_status_data, all_rooms = get_room_statuses_for_date(selected_date)  # Get fresh rooms every time
+        # Dynamically create room buttons
+        for idx, room_no in enumerate(rooms):
+            status = statuses.get(room_no, "vacant")
+            price = prices.get(room_no, "N/A")
 
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT room_no, base_price FROM room_prices")
-    price_records = cursor.fetchall()
-    conn.close()
+            btn = QPushButton(f"Room {room_no}\n{status.capitalize()}\n₱{price}")
+            btn.setStyleSheet(f"""
+                {status_colors.get(status, 'background-color: #bdc3c7;')}
+                border: 1px solid black;
+                border-radius: 6px;
+                padding: 3px;
+                font-size: 9pt;
+            """)
+            btn.setFixedSize(90, 50)  # smaller, cleaner buttons
+            btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            btn.clicked.connect(lambda _, rn=room_no: self.on_room_click(self.date, rn))
 
-    room_prices = {str(room): price for room, price in price_records}
 
-    grid_frame = tk.Frame(main_area)
-    grid_frame.pack(pady=10)
+            self.ui.gridLayout.addWidget(btn, idx // 4, idx % 4)  # 4 columns to reduce height
 
-    def refresh_map():
-        show_room_map(main_area, selected_date, on_room_click)
-
-    for idx, room_no in enumerate(all_rooms):
-        status = room_status_data.get(room_no, "vacant")
-        color = status_colors.get(status, "#bdc3c7")
-
-        price = room_prices.get(room_no, "N/A")
-
-        btn_text = f"Room {room_no}\n({status})\n₱{price}"
-
-        btn = tk.Button(
-            grid_frame,
-            text=btn_text,
-            bg=color,
-            width=15,
-            height=5,
-            command=lambda rn=room_no: on_room_click(selected_date, rn, refresh_map)
-        )
-        btn.grid(row=idx // 3, column=idx % 3, padx=10, pady=10)
+    def get_room_prices(self):
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT room_no, base_price FROM room_prices")
+        prices = {str(room): price for room, price in cursor.fetchall()}
+        conn.close()
+        return prices

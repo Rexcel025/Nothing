@@ -33,6 +33,8 @@ def add_user(username, password, role):
 def initialize_db():
     conn = connect_db()
     cursor = conn.cursor()
+
+    # Create tables
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,6 +79,16 @@ def initialize_db():
         FOREIGN KEY (product_id) REFERENCES products(id)
     )
     """)
+
+    # Ensure 'encoded_by' column exists in 'bookings'
+    cursor.execute("PRAGMA table_info(bookings)")
+    columns = [info[1] for info in cursor.fetchall()]
+    if 'encoded_by' not in columns:
+        cursor.execute("ALTER TABLE bookings ADD COLUMN encoded_by TEXT DEFAULT 'admin'")
+        print("✅ Column 'encoded_by' successfully added to 'bookings' table.")
+    else:
+        print("ℹ️ Column 'encoded_by' already exists in 'bookings' table.")
+
     conn.commit()
     conn.close()
 
@@ -92,18 +104,50 @@ def seed_initial_data():
     conn.commit()
     conn.close()
 
+def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt):
+    """Check for time overlap conflicts with existing bookings for the same room, excluding checked-out bookings."""
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT date, checkin_time, checkout_date, checkout_time, status
+        FROM bookings
+        WHERE room_no = ?
+    """, (room_no,))
+    bookings = cursor.fetchall()
+    conn.close()
+
+    for booking in bookings:
+        existing_checkin_dt = datetime.strptime(f"{booking[0]} {booking[1]}", "%Y-%m-%d %H:%M")
+        existing_checkout_dt = datetime.strptime(f"{booking[2]} {booking[3]}", "%Y-%m-%d %H:%M")
+        existing_status = booking[4]
+
+        # Skip bookings that are already checked out
+        if existing_status.lower() == "checked out":
+            continue
+
+        # If the new booking overlaps with an existing active booking
+        if (new_checkin_dt < existing_checkout_dt) and (new_checkout_dt > existing_checkin_dt):
+            return True  # Conflict found
+
+    return False  # No conflicts
+
+
 def save_booking(date, room_no, name, checkin, checkout_date, checkout_time, status):
+    checkin_dt = datetime.strptime(f"{date} {checkin}", "%Y-%m-%d %H:%M")
+    checkout_dt = datetime.strptime(f"{checkout_date} {checkout_time}", "%Y-%m-%d %H:%M")
+
+    if checkout_dt <= checkin_dt:
+        checkout_dt += timedelta(days=1)
+
+    # Check for conflicts
+    if check_booking_conflict(room_no, checkin_dt, checkout_dt):
+        return False  # Conflict detected, let GUI handle this gracefully
+
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("SELECT base_price FROM room_prices WHERE room_no = ?", (room_no,))
     result = cursor.fetchone()
     base_price = result[0] if result else 0
-
-    checkin_dt = datetime.strptime(f"{date} {checkin}", "%Y-%m-%d %H:%M")
-    checkout_dt = datetime.strptime(f"{checkout_date} {checkout_time}", "%Y-%m-%d %H:%M")
-
-    if checkout_dt < checkin_dt:
-        checkout_dt += timedelta(days=1)
 
     duration_hours = max(1, (checkout_dt - checkin_dt).total_seconds() / 3600)
     blocks = int((duration_hours + 2.9) // 3)
@@ -115,8 +159,19 @@ def save_booking(date, room_no, name, checkin, checkout_date, checkout_time, sta
     """, (date, room_no, name, checkin, checkout_date, checkout_time, status, total_cost))
     conn.commit()
     conn.close()
+    return True  # Booking successful
+
 
 def save_booking_with_cost(date, room_no, name, checkin, checkout_date, checkout_time, status, total_cost):
+    checkin_dt = datetime.strptime(f"{date} {checkin}", "%Y-%m-%d %H:%M")
+    checkout_dt = datetime.strptime(f"{checkout_date} {checkout_time}", "%Y-%m-%d %H:%M")
+
+    if checkout_dt <= checkin_dt:
+        checkout_dt += timedelta(days=1)
+
+    if check_booking_conflict(room_no, checkin_dt, checkout_dt):
+        return False  # Conflict detected
+
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -125,6 +180,8 @@ def save_booking_with_cost(date, room_no, name, checkin, checkout_date, checkout
     """, (date, room_no, name, checkin, checkout_date, checkout_time, status, total_cost))
     conn.commit()
     conn.close()
+    return True  # Booking saved
+
 
 
 
@@ -249,3 +306,55 @@ def update_room_price(room_no, new_base_price):
     """, (new_base_price, room_no))
     conn.commit()
     conn.close()
+    
+def get_all_rooms_from_db():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT room_no FROM room_prices")
+    rows = cursor.fetchall()
+    conn.close()
+    return [str(row[0]) for row in rows]  # Return room numbers as strings
+
+def get_room_statuses_for_date(date):
+    all_rooms = get_all_rooms_from_db()
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # Fetch bookings that overlap this date
+    cursor.execute("""
+        SELECT room_no, status
+        FROM bookings
+        WHERE date <= ? AND checkout_date >= ?
+    """, (date, date))
+    records = cursor.fetchall()
+    conn.close()
+
+    room_status = {room: "vacant" for room in all_rooms}
+
+    for room_no, status in records:
+        status_lower = status.lower()
+        if status_lower == "checked in":
+            room_status[room_no] = "occupied"  # Show as 'occupied' in Room Map
+        elif status_lower == "reserved":
+            room_status[room_no] = "reserved"  # Show as 'reserved' in Room Map
+        # If 'checked out', do nothing — room stays 'vacant' in the map
+
+    return room_status, all_rooms
+
+
+    # Fetch bookings that overlap this date
+    cursor.execute("""
+        SELECT room_no, status
+        FROM bookings
+        WHERE date <= ? AND checkout_date >= ?
+    """, (date, date))
+    records = cursor.fetchall()
+    conn.close()
+
+    room_status = {room: "vacant" for room in all_rooms}
+
+    for room_no, status in records:
+        room_status[room_no] = status.lower()
+
+    return room_status, all_rooms
+

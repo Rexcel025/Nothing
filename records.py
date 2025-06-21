@@ -1,78 +1,96 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
+    QTableWidgetItem, QMessageBox, QComboBox, QDialog, QLineEdit, QDateEdit
+)
+from PyQt5.QtCore import Qt, QDate
 from database import connect_db, get_all_products
 from datetime import datetime, timedelta
 
-def show_records_tab(main_area, user_role):
-    for widget in main_area.winfo_children():
-        widget.destroy()
+class RecordsTab(QWidget):
+    def __init__(self, user_role):
+        super().__init__()
+        self.user_role = user_role
+        self.selected_date = datetime.now().date()
+        self.selected_booking_id = None
 
-    tk.Label(main_area, text="Booking Records", font=("Arial", 16)).pack(pady=10)
+        self.init_ui()
+        self.load_data()
 
-    date_frame = tk.Frame(main_area)
-    date_frame.pack()
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        title = QLabel("Booking Records")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
 
-    selected_date = [datetime.now().date()]
+        # Date navigation layout
+        date_layout = QHBoxLayout()
 
-    def update_date_label():
-        date_label.config(text=f"Date: {selected_date[0]}")
+        self.date_picker = QDateEdit()
+        self.date_picker.setDate(QDate.currentDate())
+        self.date_picker.setCalendarPopup(True)
+        self.date_picker.dateChanged.connect(self.date_changed)
 
-    def prev_day():
-        selected_date[0] -= timedelta(days=1)
-        load_data()
+        prev_btn = QPushButton("< Previous")
+        prev_btn.clicked.connect(self.prev_day)
 
-    def next_day():
-        selected_date[0] += timedelta(days=1)
-        load_data()
+        next_btn = QPushButton("Next >")
+        next_btn.clicked.connect(self.next_day)
 
-    prev_btn = tk.Button(date_frame, text="< Previous", command=prev_day)
-    prev_btn.pack(side="left", padx=5)
+        date_layout.addWidget(prev_btn)
+        date_layout.addWidget(self.date_picker)
+        date_layout.addWidget(next_btn)
+        layout.addLayout(date_layout)
 
-    date_label = tk.Label(date_frame, text="")
-    date_label.pack(side="left", padx=5)
+        # Booking table
+        self.table = QTableWidget()
+        self.table.setColumnCount(10)
+        self.table.setHorizontalHeaderLabels([
+            "ID", "Date", "Room", "Name", "Check-In Time",
+            "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Encoded By"
+        ])
+        self.table.cellClicked.connect(self.show_product_details)
+        layout.addWidget(self.table)
 
-    next_btn = tk.Button(date_frame, text="Next >", command=next_day)
-    next_btn.pack(side="left", padx=5)
+        # Summary
+        self.summary_label = QLabel()
+        layout.addWidget(self.summary_label)
 
-    columns = ("ID", "Date", "Room", "Name", "Check-In Time", "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Encoded By")
-    tree = ttk.Treeview(main_area, columns=columns, show="headings", height=10)
+        # Product table
+        self.product_table = QTableWidget()
+        self.product_table.setColumnCount(3)
+        self.product_table.setHorizontalHeaderLabels(["Product", "Price", "Quantity"])
+        layout.addWidget(self.product_table)
 
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, width=100, anchor="center")
+        # Quantity adjustment buttons
+        qty_btn_layout = QHBoxLayout()
+        plus_btn = QPushButton("+")
+        plus_btn.clicked.connect(lambda: self.adjust_quantity(1))
+        minus_btn = QPushButton("-")
+        minus_btn.clicked.connect(lambda: self.adjust_quantity(-1))
+        qty_btn_layout.addWidget(plus_btn)
+        qty_btn_layout.addWidget(minus_btn)
+        layout.addLayout(qty_btn_layout)
 
-    tree.pack(expand=True, fill="both", padx=10, pady=5)
+        # Add product button
+        add_product_btn = QPushButton("+ Add Product")
+        add_product_btn.clicked.connect(self.add_product_popup)
+        layout.addWidget(add_product_btn)
 
-    summary_label = tk.Label(main_area, text="")
-    summary_label.pack(pady=5)
+    def date_changed(self, new_date):
+        self.selected_date = new_date.toPyDate()
+        self.load_data()
 
-    details_frame = tk.LabelFrame(main_area, text="Products Availed")
-    details_frame.pack(fill="x", padx=10, pady=5)
+    def prev_day(self):
+        self.selected_date -= timedelta(days=1)
+        self.date_picker.setDate(QDate(self.selected_date.year, self.selected_date.month, self.selected_date.day))
+        self.load_data()
 
-    details_tree = ttk.Treeview(details_frame, columns=("Product", "Price", "Quantity"), show="headings", height=5)
-    details_tree.heading("Product", text="Product")
-    details_tree.heading("Price", text="Price")
-    details_tree.heading("Quantity", text="Quantity")
-    details_tree.column("Product", width=150)
-    details_tree.column("Price", width=80, anchor="center")
-    details_tree.column("Quantity", width=80, anchor="center")
-    details_tree.pack(fill="both", padx=5, pady=5)
+    def next_day(self):
+        self.selected_date += timedelta(days=1)
+        self.date_picker.setDate(QDate(self.selected_date.year, self.selected_date.month, self.selected_date.day))
+        self.load_data()
 
-    qty_buttons_frame = tk.Frame(details_frame)
-    qty_buttons_frame.pack(pady=5)
-
-    plus_btn = tk.Button(qty_buttons_frame, text="+", width=5)
-    plus_btn.pack(side="left", padx=5)
-
-    minus_btn = tk.Button(qty_buttons_frame, text="-", width=5)
-    minus_btn.pack(side="left", padx=5)
-
-    add_product_btn = tk.Button(details_frame, text="+ Add Product", state="disabled")
-    add_product_btn.pack(pady=5)
-
-    selected_booking_id = [None]
-
-    def load_data():
+    def load_data(self):
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("""
@@ -81,31 +99,24 @@ def show_records_tab(main_area, user_role):
             FROM bookings b
             LEFT JOIN users u ON b.encoded_by = u.id
             WHERE b.date = ?
-        """, (selected_date[0].strftime('%Y-%m-%d'),))
+        """, (self.selected_date.strftime('%Y-%m-%d'),))
         bookings = cursor.fetchall()
         conn.close()
 
-        tree.delete(*tree.get_children())
+        self.table.setRowCount(len(bookings))
         total_income = 0
-        total_bookings = len(bookings)
 
-        for booking in bookings:
+        for row_idx, booking in enumerate(bookings):
+            for col_idx, item in enumerate(booking):
+                self.table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
             total_income += booking[8]
-            tree.insert("", "end", values=booking)
 
-        summary_label.config(text=f"Total Bookings: {total_bookings} | Total Income: ₱{total_income:.2f}")
-        update_date_label()
+        self.summary_label.setText(f"Total Bookings: {len(bookings)} | Total Income: ₱{total_income:.2f}")
 
-    def show_product_details(event):
-        selected = tree.selection()
-        if not selected:
-            add_product_btn.config(state="disabled")
-            return
-        booking_id = tree.item(selected[0])["values"][0]
-        selected_booking_id[0] = booking_id
-        add_product_btn.config(state="normal")
+    def show_product_details(self, row, _):
+        booking_id = int(self.table.item(row, 0).text())
+        self.selected_booking_id = booking_id
 
-        details_tree.delete(*details_tree.get_children())
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("""
@@ -117,100 +128,84 @@ def show_records_tab(main_area, user_role):
         products = cursor.fetchall()
         conn.close()
 
-        for product in products:
-            details_tree.insert("", "end", values=(product[0], product[1], product[2]), tags=(product[3],))
+        self.product_table.setRowCount(len(products))
+        for row_idx, product in enumerate(products):
+            for col_idx, item in enumerate(product[:3]):
+                self.product_table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
+            self.product_table.setItem(row_idx, 3, QTableWidgetItem(str(product[3])))  # Hidden product ID
 
-    def adjust_quantity(change):
-        selected = details_tree.selection()
-        if not selected or selected_booking_id[0] is None:
+    def adjust_quantity(self, change):
+        selected = self.product_table.currentRow()
+        if selected == -1 or self.selected_booking_id is None:
             return
-        item = details_tree.item(selected[0])
-        product_id = details_tree.item(selected[0], "tags")[0]
-        quantity = int(item['values'][2])
+        product_id = int(self.product_table.item(selected, 3).text())
+        quantity = int(self.product_table.item(selected, 2).text())
         new_qty = quantity + change
 
         conn = connect_db()
         cursor = conn.cursor()
         if new_qty < 1:
             cursor.execute("""
-                DELETE FROM booking_products
-                WHERE booking_id = ? AND product_id = ?
-            """, (selected_booking_id[0], product_id))
+                DELETE FROM booking_products WHERE booking_id = ? AND product_id = ?
+            """, (self.selected_booking_id, product_id))
         else:
             cursor.execute("""
-                UPDATE booking_products
-                SET quantity = ?
-                WHERE booking_id = ? AND product_id = ?
-            """, (new_qty, selected_booking_id[0], product_id))
+                UPDATE booking_products SET quantity = ? WHERE booking_id = ? AND product_id = ?
+            """, (new_qty, self.selected_booking_id, product_id))
         conn.commit()
         conn.close()
+        self.show_product_details(self.table.currentRow(), 0)
 
-        show_product_details(None)
-
-    def add_product_popup():
-        if selected_booking_id[0] is None:
+    def add_product_popup(self):
+        if self.selected_booking_id is None:
             return
 
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Product")
+
+        layout = QVBoxLayout(dialog)
+        product_cb = QComboBox()
+        all_products = get_all_products()
+        product_cb.addItems([prod[1] for prod in all_products])
+        layout.addWidget(QLabel("Select Product:"))
+        layout.addWidget(product_cb)
+
+        qty_input = QLineEdit("1")
+        layout.addWidget(QLabel("Quantity:"))
+        layout.addWidget(qty_input)
+
         def save_product():
-            product_name = product_var.get()
-            quantity = qty_var.get()
-            if not product_name or not quantity.isdigit() or int(quantity) <= 0:
-                messagebox.showwarning("Invalid Input", "Select a product and enter a valid quantity.")
+            product_name = product_cb.currentText()
+            quantity = qty_input.text()
+            if not quantity.isdigit() or int(quantity) <= 0:
+                QMessageBox.warning(self, "Invalid Input", "Enter valid quantity.")
                 return
 
             quantity = int(quantity)
-
             conn = connect_db()
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM products WHERE name = ?", (product_name,))
-            result = cursor.fetchone()
-            if not result:
-                messagebox.showerror("Error", "Product not found.")
-                conn.close()
-                return
-            product_id = result[0]
+            product_id = cursor.fetchone()[0]
 
             cursor.execute("""
-                SELECT id FROM booking_products
-                WHERE booking_id = ? AND product_id = ?
-            """, (selected_booking_id[0], product_id))
+                SELECT id FROM booking_products WHERE booking_id = ? AND product_id = ?
+            """, (self.selected_booking_id, product_id))
             existing = cursor.fetchone()
 
             if existing:
                 cursor.execute("""
-                    UPDATE booking_products
-                    SET quantity = quantity + ?
-                    WHERE booking_id = ? AND product_id = ?
-                """, (quantity, selected_booking_id[0], product_id))
+                    UPDATE booking_products SET quantity = quantity + ? WHERE booking_id = ? AND product_id = ?
+                """, (quantity, self.selected_booking_id, product_id))
             else:
                 cursor.execute("""
-                    INSERT INTO booking_products (booking_id, product_id, quantity)
-                    VALUES (?, ?, ?)
-                """, (selected_booking_id[0], product_id, quantity))
-
+                    INSERT INTO booking_products (booking_id, product_id, quantity) VALUES (?, ?, ?)
+                """, (self.selected_booking_id, product_id, quantity))
             conn.commit()
             conn.close()
-            top.destroy()
-            show_product_details(None)
+            dialog.accept()
+            self.show_product_details(self.table.currentRow(), 0)
 
-        top = tk.Toplevel(main_area)
-        top.title("Add Product")
-
-        tk.Label(top, text="Select Product:").pack(padx=10, pady=5)
-        product_var = tk.StringVar()
-        product_cb = ttk.Combobox(top, textvariable=product_var)
-        product_cb['values'] = [prod[1] for prod in get_all_products()]
-        product_cb.pack(padx=10, pady=5)
-
-        tk.Label(top, text="Quantity:").pack(padx=10, pady=5)
-        qty_var = tk.StringVar(value="1")
-        tk.Entry(top, textvariable=qty_var).pack(padx=10, pady=5)
-
-        tk.Button(top, text="Add", command=save_product).pack(pady=10)
-
-    plus_btn.config(command=lambda: adjust_quantity(1))
-    minus_btn.config(command=lambda: adjust_quantity(-1))
-    add_product_btn.config(command=add_product_popup)
-
-    tree.bind("<<TreeviewSelect>>", show_product_details)
-    load_data()
+        save_btn = QPushButton("Add")
+        save_btn.clicked.connect(save_product)
+        layout.addWidget(save_btn)
+        dialog.exec_()

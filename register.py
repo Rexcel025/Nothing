@@ -1,91 +1,120 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
-from database import add_user, get_user
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
+    QComboBox, QMessageBox, QListWidget
+)
+from database import add_user, get_user, connect_db
 import bcrypt
 
-# Popup register window for login.py
-def show_register():
-    reg_window = tk.Toplevel()
-    reg_window.title("Register New User")
+class RegisterWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
 
-    tk.Label(reg_window, text="Username:").pack(pady=5)
-    entry_user = tk.Entry(reg_window)
-    entry_user.pack(pady=5)
+    def init_ui(self):
+        layout = QVBoxLayout()
 
-    tk.Label(reg_window, text="Password:").pack(pady=5)
-    entry_pass = tk.Entry(reg_window, show="*")
-    entry_pass.pack(pady=5)
+        title = QLabel("Register New User")
+        title.setStyleSheet("font-size: 16pt; font-weight: bold;")
+        layout.addWidget(title)
 
-    tk.Label(reg_window, text="Role (admin/cashier):").pack(pady=5)
-    role_combobox = ttk.Combobox(reg_window, values=["admin", "cashier"], state="readonly")
-    role_combobox.current(0)
-    role_combobox.pack(pady=5)
+        form_layout = QVBoxLayout()
 
-    def handle_register():
-        username = entry_user.get()
-        password = entry_pass.get()
-        role = role_combobox.get()
+        # Username
+        user_layout = QHBoxLayout()
+        user_label = QLabel("Username:")
+        self.username_input = QLineEdit()
+        user_layout.addWidget(user_label)
+        user_layout.addWidget(self.username_input)
+        form_layout.addLayout(user_layout)
 
-        if not username or not password or not role:
-            messagebox.showerror("Error", "All fields are required.")
+        # Password
+        pass_layout = QHBoxLayout()
+        pass_label = QLabel("Password:")
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
+        pass_layout.addWidget(pass_label)
+        pass_layout.addWidget(self.password_input)
+        form_layout.addLayout(pass_layout)
+
+        # Role
+        role_layout = QHBoxLayout()
+        role_label = QLabel("Role:")
+        self.role_combo = QComboBox()
+        self.role_combo.addItems(["admin", "cashier"])
+        role_layout.addWidget(role_label)
+        role_layout.addWidget(self.role_combo)
+        form_layout.addLayout(role_layout)
+
+        # Register Button
+        register_button = QPushButton("Register")
+        register_button.clicked.connect(self.register_user)
+        form_layout.addWidget(register_button)
+
+        layout.addLayout(form_layout)
+
+        # User List
+        list_title = QLabel("Existing Users:")
+        layout.addWidget(list_title)
+
+        self.user_list = QListWidget()
+        self.load_users()
+        layout.addWidget(self.user_list)
+
+        # Remove Button
+        remove_button = QPushButton("Remove Selected User")
+        remove_button.clicked.connect(self.remove_user)
+        layout.addWidget(remove_button)
+
+        self.setLayout(layout)
+
+    def load_users(self):
+        self.user_list.clear()
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT username FROM users")
+        users = cursor.fetchall()
+        conn.close()
+        for user in users:
+            self.user_list.addItem(user[0])
+
+    def register_user(self):
+        username = self.username_input.text()
+        password = self.password_input.text()
+        role = self.role_combo.currentText()
+
+        if not username or not password:
+            QMessageBox.warning(self, "Error", "All fields are required.")
             return
 
         if get_user(username):
-            messagebox.showerror("Error", "Username already exists.")
+            QMessageBox.warning(self, "Error", "Username already exists.")
             return
 
         hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        try:
-            add_user(username, hashed_pw, role)
-            messagebox.showinfo("Success", "User registered successfully.")
-            reg_window.destroy()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to register user: {e}")
+        if add_user(username, hashed_pw, role):
+            QMessageBox.information(self, "Success", "User registered.")
+            self.load_users()  # Refresh list
+            self.username_input.clear()
+            self.password_input.clear()
+            self.role_combo.setCurrentIndex(0)
+        else:
+            QMessageBox.warning(self, "Error", "Failed to register user.")
 
-    tk.Button(reg_window, text="Register", command=handle_register).pack(pady=10)
-
-
-# Inline register form for dashboard.py
-def show_register_in_main_area(main_area):
-    for widget in main_area.winfo_children():
-        widget.destroy()
-
-    tk.Label(main_area, text="Register New User", font=("Arial", 16)).pack(pady=10)
-
-    tk.Label(main_area, text="Username:").pack(pady=5)
-    entry_user = tk.Entry(main_area)
-    entry_user.pack(pady=5)
-
-    tk.Label(main_area, text="Password:").pack(pady=5)
-    entry_pass = tk.Entry(main_area, show="*")
-    entry_pass.pack(pady=5)
-
-    tk.Label(main_area, text="Role (admin/cashier):").pack(pady=5)
-    role_combobox = ttk.Combobox(main_area, values=["admin", "cashier"], state="readonly")
-    role_combobox.current(0)
-    role_combobox.pack(pady=5)
-
-    def handle_register():
-        username = entry_user.get()
-        password = entry_pass.get()
-        role = role_combobox.get()
-
-        if not username or not password or not role:
-            messagebox.showerror("Error", "All fields are required.")
+    def remove_user(self):
+        selected_items = self.user_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Error", "Select a user to remove.")
             return
 
-        if get_user(username):
-            messagebox.showerror("Error", "Username already exists.")
-            return
-
-        hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        try:
-            add_user(username, hashed_pw, role)
-            messagebox.showinfo("Success", "User registered successfully.")
-            entry_user.delete(0, tk.END)
-            entry_pass.delete(0, tk.END)
-            role_combobox.current(0)
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to register user: {e}")
-
-    tk.Button(main_area, text="Register", command=handle_register).pack(pady=10)
+        username = selected_items[0].text()
+        confirm = QMessageBox.question(self, "Confirm Removal",
+                                       f"Remove user '{username}'?",
+                                       QMessageBox.Yes | QMessageBox.No)
+        if confirm == QMessageBox.Yes:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+            conn.commit()
+            conn.close()
+            self.load_users()  # Refresh list
+            QMessageBox.information(self, "Removed", f"User '{username}' removed.")
