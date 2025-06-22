@@ -48,4 +48,4 @@ class RegisterPopup(QDialog):
         hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         add_user(username, hashed_pw, role)
         QMessageBox.information(self, "Success", "User registered successfully.")
-        self.accept()  # close popup
+        self.accept()  

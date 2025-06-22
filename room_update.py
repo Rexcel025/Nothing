@@ -109,7 +109,7 @@ class RoomUpdate(QWidget):
             extra_hours = duration_hours - 3
             total_cost = base_price + (extra_hours * (base_price / 3))
 
-        # NEW: Handle booking conflict here
+        # Handle booking conflict here
         success = save_booking_with_cost(
             self.date, self.room_no, name, checkin, checkout_date, checkout, status, total_cost
         )

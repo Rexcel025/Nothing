@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushB
 import sys
 import bcrypt
 from database import get_user
-from dashboard import Dashboard  # Import Dashboard class directly
+from dashboard import Dashboard  
 from register_popup import RegisterPopup
 from database import initialize_db, seed_initial_data
 
@@ -46,9 +46,9 @@ class LoginWindow(QMainWindow):
         user = get_user(username)
         if user and bcrypt.checkpw(password.encode(), user[2]):
             # OPEN DASHBOARD WINDOW
-            self.dashboard = Dashboard(user[3])  # Create Dashboard instance
+            self.dashboard = Dashboard(user[3])  
             self.dashboard.show()
-            self.close()  # Close login window
+            self.close()  
         else:
             QMessageBox.critical(self, "Login Failed", "Wrong username or password.")
 

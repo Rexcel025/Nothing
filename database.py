@@ -1,4 +1,3 @@
-#database.py
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -80,7 +79,7 @@ def initialize_db():
     )
     """)
 
-    # Ensure 'encoded_by' column exists in 'bookings'
+
     cursor.execute("PRAGMA table_info(bookings)")
     columns = [info[1] for info in cursor.fetchall()]
     if 'encoded_by' not in columns:
@@ -122,11 +121,11 @@ def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt, booking_id_
         existing_checkout_dt = datetime.strptime(f"{booking[3]} {booking[4]}", "%Y-%m-%d %H:%M")
         existing_status = booking[5]
 
-        # Skip if it's the same booking we're updating (early check-in or extension)
+
         if booking_id_to_ignore is not None and existing_id == booking_id_to_ignore:
             continue
 
-        # Skip checked-out bookings
+
         if existing_status.lower() == "checked out":
             continue
 
@@ -147,7 +146,7 @@ def save_booking(date, room_no, name, checkin, checkout_date, checkout_time, sta
 
     # Check for conflicts
     if check_booking_conflict(room_no, checkin_dt, checkout_dt):
-        return False  # Conflict detected, let GUI handle this gracefully
+        return False  # Conflict detected
 
     conn = connect_db()
     cursor = conn.cursor()
@@ -343,24 +342,9 @@ def get_room_statuses_for_date(date):
             room_status[room_no] = "occupied"  # Show as 'occupied' in Room Map
         elif status_lower == "reserved":
             room_status[room_no] = "reserved"  # Show as 'reserved' in Room Map
-        # If 'checked out', do nothing — room stays 'vacant' in the map
+        # If 'checked out', do nothing room stays 'vacant' in the map
 
     return room_status, all_rooms
 
 
-    # Fetch bookings that overlap this date
-    cursor.execute("""
-        SELECT room_no, status
-        FROM bookings
-        WHERE date <= ? AND checkout_date >= ?
-    """, (date, date))
-    records = cursor.fetchall()
-    conn.close()
-
-    room_status = {room: "vacant" for room in all_rooms}
-
-    for room_no, status in records:
-        room_status[room_no] = status.lower()
-
-    return room_status, all_rooms
 

@@ -37,9 +37,9 @@ class RoomMap(QWidget):
         # Fetch room statuses and prices
         statuses, rooms = get_room_statuses_for_date(self.date)
         prices = self.get_room_prices()
-        print("Statuses:", statuses)  # 👈 check what statuses dict contains
-        print("Rooms:", rooms)        # 👈 check what room list contains
-        print("Prices:", prices)      # 👈 check room prices
+        print("Statuses:", statuses)  #just for debugging hehe
+        print("Rooms:", rooms)        
+        print("Prices:", prices)     
         # Clear existing buttons in the grid layout
         while self.ui.gridLayout.count():
             child = self.ui.gridLayout.takeAt(0)
@@ -59,12 +59,12 @@ class RoomMap(QWidget):
                 padding: 3px;
                 font-size: 9pt;
             """)
-            btn.setFixedSize(90, 50)  # smaller, cleaner buttons
+            btn.setFixedSize(90, 50) 
             btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             btn.clicked.connect(lambda _, rn=room_no: self.on_room_click(self.date, rn))
 
 
-            self.ui.gridLayout.addWidget(btn, idx // 4, idx % 4)  # 4 columns to reduce height
+            self.ui.gridLayout.addWidget(btn, idx // 4, idx % 4)  
 
     def get_room_prices(self):
         conn = connect_db()

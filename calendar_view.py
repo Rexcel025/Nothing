@@ -7,14 +7,8 @@ class CalendarView(QWidget):
         super().__init__()
         self.ui = Ui_CalendarViewWidget()
         self.ui.setupUi(self)
-
         self.on_day_selected_callback = on_day_selected_callback
-
-        # Connect calendar click to callback
         self.ui.calendarWidget.clicked.connect(self.handle_date_selected)
-
-        # Calendar appearance settings for dark mode
-
         self.ui.calendarWidget.setGridVisible(True)
         self.ui.calendarWidget.setVerticalHeaderFormat(self.ui.calendarWidget.NoVerticalHeader)
         self.ui.calendarWidget.setHorizontalHeaderFormat(self.ui.calendarWidget.SingleLetterDayNames)
@@ -42,7 +36,7 @@ class CalendarView(QWidget):
 
         self.hide_overflow_days()
 
-        # when navigating to another month, refresh hidden overflow days
+  
         self.ui.calendarWidget.currentPageChanged.connect(lambda: self.hide_overflow_days())
 
     def handle_date_selected(self, qdate: QDate):
@@ -63,4 +57,4 @@ class CalendarView(QWidget):
                     date = index.data(0)
                     if isinstance(date, QDate):
                         if date.month() != this_month:
-                            view.setIndexWidget(index, QLabel(""))  # Replaces overflow day with empty label
+                            view.setIndexWidget(index, QLabel(""))  

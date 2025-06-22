@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayo
 from PyQt5.QtCore import Qt, QDate, QTime
 from datetime import datetime
 from database import connect_db, check_booking_conflict 
-
+from database import check_booking_conflict 
 class CheckedInTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -44,7 +44,7 @@ class CheckedInTab(QWidget):
 
         for row in rows:
             try:
-                # Correct order: checkout_date first, then checkout_time
+
                 check_in_dt = datetime.strptime(f"{row[1]} {row[4]}", "%Y-%m-%d %H:%M")
                 check_out_dt = datetime.strptime(f"{row[5]} {row[6]}", "%Y-%m-%d %H:%M")
                 current_status = "Overstayed" if now > check_out_dt else "Checked In"
@@ -53,7 +53,6 @@ class CheckedInTab(QWidget):
 
             total_cost = f"₱{row[8]:.2f}" if row[8] else "₱0.00"
 
-            # Note: Using correct order for checkout_date and checkout_time in display as well
             row_data = [
                 str(row[0]),  # ID
                 row[1],       # Date
@@ -119,8 +118,8 @@ class CheckedInTab(QWidget):
             conn.close()
             return
 
-        # 🛡️ Check for conflict here:
-        from database import check_booking_conflict  # Important: make sure this is imported at the top
+        # Check for conflict 
+ 
         conflict = check_booking_conflict(room_no, check_in_dt, check_out_dt, exclude_booking_id=booking_id)
         if conflict:
             QMessageBox.critical(self, "Conflict", "Extension overlaps with another booking.")
@@ -162,10 +161,8 @@ class CheckedInTab(QWidget):
 
         conn = connect_db()
         cursor = conn.cursor()
-        # Correct status here
         cursor.execute("UPDATE bookings SET status = 'checked out' WHERE id = ?", (booking_id,))
         conn.commit()
         conn.close()
-
         self.load_data()
         QMessageBox.information(self, "Checked Out", "The booking has been checked out successfully.")

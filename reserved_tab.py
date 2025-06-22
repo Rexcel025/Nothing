@@ -101,7 +101,7 @@ class ReservedTab(QWidget):
             QMessageBox.critical(self, "Invalid", "Checkout time must be after the new check-in time.")
             return
 
-        # Conflict check — ignore this booking itself
+        # Conflict check 
         if check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt, booking_id_to_ignore=booking_id):
             QMessageBox.warning(self, "Conflict Detected", "Early check-in conflicts with another booking.")
             return
@@ -138,8 +138,8 @@ class ReservedTab(QWidget):
             return
 
         booking_id = int(self.table.item(selected, 0).text())
-        current_date = self.table.item(selected, 6).text()  # Checkout Date
-        current_time = self.table.item(selected, 5).text()  # Checkout Time
+        current_date = self.table.item(selected, 6).text()  
+        current_time = self.table.item(selected, 5).text()  
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Extend Booking")

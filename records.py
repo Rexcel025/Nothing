@@ -106,8 +106,8 @@ class RecordsTab(QWidget):
         self.table.setRowCount(len(bookings))
 
         for row_idx, booking in enumerate(bookings):
-            booking_id = booking[0]
-            room_total = booking[8]  # Room total cost
+            booking_id = booking[0] 
+            room_total = booking[8]  
 
             # Calculate product total per booking
             cursor.execute("""
@@ -125,7 +125,7 @@ class RecordsTab(QWidget):
             # Populate row
             for col_idx, item in enumerate(booking):
                 self.table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
-            self.table.setItem(row_idx, 10, QTableWidgetItem(f"₱{product_total:.2f}"))  # Product Total column
+            self.table.setItem(row_idx, 10, QTableWidgetItem(f"₱{product_total:.2f}"))  
 
         conn.close()
 
@@ -153,7 +153,7 @@ class RecordsTab(QWidget):
         for row_idx, product in enumerate(products):
             for col_idx, item in enumerate(product[:3]):
                 self.product_table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
-            self.product_table.setItem(row_idx, 3, QTableWidgetItem(str(product[3])))  # Hidden Product ID
+            self.product_table.setItem(row_idx, 3, QTableWidgetItem(str(product[3])))  
 
     def adjust_quantity(self, change):
         selected = self.product_table.currentRow()
@@ -178,7 +178,7 @@ class RecordsTab(QWidget):
         conn.close()
 
         self.show_product_details(self.table.currentRow(), 0)
-        self.load_data()  # Refresh summary + per booking total
+        self.load_data()  
 
     def add_product_popup(self):
         if self.selected_booking_id is None:
@@ -229,7 +229,7 @@ class RecordsTab(QWidget):
             dialog.accept()
 
             self.show_product_details(self.table.currentRow(), 0)
-            self.load_data()  # Refresh summary + per booking total
+            self.load_data()  
 
         save_btn = QPushButton("Add")
         save_btn.clicked.connect(save_product)
