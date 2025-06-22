@@ -6,7 +6,7 @@ from database import get_user
 from dashboard import Dashboard  # Import Dashboard class directly
 from register_popup import RegisterPopup
 from database import initialize_db, seed_initial_data
- # You may need to convert this to PyQt5 later
+
 
 class LoginWindow(QMainWindow):
     initialize_db()

@@ -104,12 +104,12 @@ def seed_initial_data():
     conn.commit()
     conn.close()
 
-def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt):
-    """Check for time overlap conflicts with existing bookings for the same room, excluding checked-out bookings."""
+def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt, booking_id_to_ignore=None):
+    """Check for time overlap conflicts with existing bookings for the same room, excluding checked-out and the booking being modified."""
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT date, checkin_time, checkout_date, checkout_time, status
+        SELECT id, date, checkin_time, checkout_date, checkout_time, status
         FROM bookings
         WHERE room_no = ?
     """, (room_no,))
@@ -117,19 +117,25 @@ def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt):
     conn.close()
 
     for booking in bookings:
-        existing_checkin_dt = datetime.strptime(f"{booking[0]} {booking[1]}", "%Y-%m-%d %H:%M")
-        existing_checkout_dt = datetime.strptime(f"{booking[2]} {booking[3]}", "%Y-%m-%d %H:%M")
-        existing_status = booking[4]
+        existing_id = booking[0]
+        existing_checkin_dt = datetime.strptime(f"{booking[1]} {booking[2]}", "%Y-%m-%d %H:%M")
+        existing_checkout_dt = datetime.strptime(f"{booking[3]} {booking[4]}", "%Y-%m-%d %H:%M")
+        existing_status = booking[5]
 
-        # Skip bookings that are already checked out
+        # Skip if it's the same booking we're updating (early check-in or extension)
+        if booking_id_to_ignore is not None and existing_id == booking_id_to_ignore:
+            continue
+
+        # Skip checked-out bookings
         if existing_status.lower() == "checked out":
             continue
 
-        # If the new booking overlaps with an existing active booking
+        # Conflict detection
         if (new_checkin_dt < existing_checkout_dt) and (new_checkout_dt > existing_checkin_dt):
-            return True  # Conflict found
+            return True  # Conflict detected
 
-    return False  # No conflicts
+    return False  # No conflict
+
 
 
 def save_booking(date, room_no, name, checkin, checkout_date, checkout_time, status):

@@ -1,32 +1,82 @@
-import tkinter as tk
-from tkinter import messagebox
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QMessageBox
+)
 from database import connect_db
 
-def show_room_management(main_area):
-    for widget in main_area.winfo_children():
-        widget.destroy()
+class RoomManagement(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.load_rooms()
 
-    tk.Label(main_area, text="Room Management", font=("Arial", 16)).pack(pady=10)
+    def initUI(self):
+        main_layout = QVBoxLayout()
 
-    form_frame = tk.Frame(main_area)
-    form_frame.pack(pady=10)
+        title = QLabel("Room Management")
+        title.setStyleSheet("font-size: 16pt; font-weight: bold; margin-bottom: 10px;")
+        main_layout.addWidget(title)
 
-    tk.Label(form_frame, text="Room No:").grid(row=0, column=0, padx=5, pady=5)
-    tk.Label(form_frame, text="Base Price:").grid(row=1, column=0, padx=5, pady=5)
+        # Form Layout
+        form_layout = QVBoxLayout()
 
-    entry_room_no = tk.Entry(form_frame)
-    entry_price = tk.Entry(form_frame)
-    entry_room_no.grid(row=0, column=1, padx=5, pady=5)
-    entry_price.grid(row=1, column=1, padx=5, pady=5)
+        room_no_layout = QHBoxLayout()
+        room_no_label = QLabel("Room No:")
+        self.room_no_input = QLineEdit()
+        room_no_layout.addWidget(room_no_label)
+        room_no_layout.addWidget(self.room_no_input)
+        form_layout.addLayout(room_no_layout)
 
-    def add_room():
-        room_no = entry_room_no.get().strip()
+        price_layout = QHBoxLayout()
+        price_label = QLabel("Base Price:")
+        self.price_input = QLineEdit()
+        price_layout.addWidget(price_label)
+        price_layout.addWidget(self.price_input)
+        form_layout.addLayout(price_layout)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+
+        add_btn = QPushButton("Add Room")
+        add_btn.clicked.connect(self.add_room)
+        button_layout.addWidget(add_btn)
+
+        update_btn = QPushButton("Update Price")
+        update_btn.clicked.connect(self.update_room)
+        button_layout.addWidget(update_btn)
+
+        delete_btn = QPushButton("Remove Room")
+        delete_btn.clicked.connect(self.delete_room)
+        button_layout.addWidget(delete_btn)
+
+        form_layout.addLayout(button_layout)
+
+        main_layout.addLayout(form_layout)
+
+        # Room List
+        self.room_list = QListWidget()
+        main_layout.addWidget(QLabel("Existing Rooms:"))
+        main_layout.addWidget(self.room_list)
+
+        self.setLayout(main_layout)
+        self.setStyleSheet("background-color: #2b2b2b; color: #f0f0f0;")
+
+    def load_rooms(self):
+        self.room_list.clear()
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT room_no, base_price FROM room_prices")
+        for room_no, price in cursor.fetchall():
+            self.room_list.addItem(f"Room {room_no}: ₱{price}")
+        conn.close()
+
+    def add_room(self):
+        room_no = self.room_no_input.text().strip()
         try:
-            price = float(entry_price.get())
-            if room_no == "":
+            price = float(self.price_input.text())
+            if not room_no:
                 raise ValueError("Room No cannot be empty.")
         except ValueError as ve:
-            messagebox.showerror("Invalid Input", str(ve))
+            QMessageBox.critical(self, "Invalid Input", str(ve))
             return
 
         conn = connect_db()
@@ -34,18 +84,18 @@ def show_room_management(main_area):
         try:
             cursor.execute("INSERT INTO room_prices (room_no, base_price) VALUES (?, ?)", (room_no, price))
             conn.commit()
-            messagebox.showinfo("Success", "Room added successfully.")
-            load_rooms()
+            QMessageBox.information(self, "Success", "Room added successfully.")
+            self.load_rooms()
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            QMessageBox.critical(self, "Error", str(e))
         conn.close()
 
-    def update_room():
-        room_no = entry_room_no.get().strip()
+    def update_room(self):
+        room_no = self.room_no_input.text().strip()
         try:
-            price = float(entry_price.get())
+            price = float(self.price_input.text())
         except ValueError:
-            messagebox.showerror("Invalid Input", "Enter a valid price.")
+            QMessageBox.critical(self, "Invalid Input", "Enter a valid price.")
             return
 
         conn = connect_db()
@@ -53,14 +103,13 @@ def show_room_management(main_area):
         cursor.execute("UPDATE room_prices SET base_price = ? WHERE room_no = ?", (price, room_no))
         conn.commit()
         conn.close()
-        messagebox.showinfo("Success", "Room updated successfully.")
-        load_rooms()
+        QMessageBox.information(self, "Success", "Room updated successfully.")
+        self.load_rooms()
 
-    def delete_room():
-        room_no = entry_room_no.get().strip()
-
-        if room_no == "":
-            messagebox.showerror("Invalid Input", "Enter Room No to delete.")
+    def delete_room(self):
+        room_no = self.room_no_input.text().strip()
+        if not room_no:
+            QMessageBox.critical(self, "Invalid Input", "Enter Room No to delete.")
             return
 
         conn = connect_db()
@@ -68,29 +117,5 @@ def show_room_management(main_area):
         cursor.execute("DELETE FROM room_prices WHERE room_no = ?", (room_no,))
         conn.commit()
         conn.close()
-        messagebox.showinfo("Success", "Room deleted successfully.")
-        load_rooms()
-
-    tk.Button(form_frame, text="Add Room", command=add_room).grid(row=2, column=0, padx=5, pady=5)
-    tk.Button(form_frame, text="Update Price", command=update_room).grid(row=2, column=1, padx=5, pady=5)
-    tk.Button(form_frame, text="Remove Room", command=delete_room).grid(row=2, column=2, padx=5, pady=5)
-
-    list_frame = tk.Frame(main_area)
-    list_frame.pack(pady=10)
-
-    tk.Label(list_frame, text="Existing Rooms:").pack()
-
-    room_listbox = tk.Listbox(list_frame, width=40)
-    room_listbox.pack()
-
-    def load_rooms():
-        room_listbox.delete(0, tk.END)
-        conn = connect_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT room_no, base_price FROM room_prices")
-        for room_no, price in cursor.fetchall():
-            room_listbox.insert(tk.END, f"Room {room_no}: ₱{price}")
-        conn.close()
-
-    load_rooms()
-
+        QMessageBox.information(self, "Success", "Room deleted successfully.")
+        self.load_rooms()

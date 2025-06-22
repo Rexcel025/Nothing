@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QDateEdit, QTimeEdit
 from PyQt5.QtCore import Qt, QDate, QTime
 from datetime import datetime
-from database import connect_db
+from database import connect_db, check_booking_conflict 
 
 class CheckedInTab(QWidget):
     def __init__(self):
@@ -119,6 +119,14 @@ class CheckedInTab(QWidget):
             conn.close()
             return
 
+        # 🛡️ Check for conflict here:
+        from database import check_booking_conflict  # Important: make sure this is imported at the top
+        conflict = check_booking_conflict(room_no, check_in_dt, check_out_dt, exclude_booking_id=booking_id)
+        if conflict:
+            QMessageBox.critical(self, "Conflict", "Extension overlaps with another booking.")
+            conn.close()
+            return
+
         cursor.execute("SELECT base_price FROM room_prices WHERE room_no = ?", (room_no,))
         base_price = cursor.fetchone()[0]
 
@@ -139,7 +147,6 @@ class CheckedInTab(QWidget):
         dialog.accept()
         self.load_data()
         QMessageBox.information(self, "Success", f"Booking extended. New total cost: ₱{int(total_cost)}")
-
     def checkout_selected(self):
         selected = self.table.currentRow()
         if selected < 0:

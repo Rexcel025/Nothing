@@ -22,9 +22,8 @@ class RecordsTab(QWidget):
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # Date navigation layout
+        # Date navigation
         date_layout = QHBoxLayout()
-
         self.date_picker = QDateEdit()
         self.date_picker.setDate(QDate.currentDate())
         self.date_picker.setCalendarPopup(True)
@@ -32,7 +31,6 @@ class RecordsTab(QWidget):
 
         prev_btn = QPushButton("< Previous")
         prev_btn.clicked.connect(self.prev_day)
-
         next_btn = QPushButton("Next >")
         next_btn.clicked.connect(self.next_day)
 
@@ -43,10 +41,10 @@ class RecordsTab(QWidget):
 
         # Booking table
         self.table = QTableWidget()
-        self.table.setColumnCount(10)
+        self.table.setColumnCount(11)
         self.table.setHorizontalHeaderLabels([
             "ID", "Date", "Room", "Name", "Check-In Time",
-            "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Encoded By"
+            "Check-Out Time", "Check-Out Date", "Status", "Room Cost", "Encoded By", "Product Total"
         ])
         self.table.cellClicked.connect(self.show_product_details)
         layout.addWidget(self.table)
@@ -57,11 +55,11 @@ class RecordsTab(QWidget):
 
         # Product table
         self.product_table = QTableWidget()
-        self.product_table.setColumnCount(3)
-        self.product_table.setHorizontalHeaderLabels(["Product", "Price", "Quantity"])
+        self.product_table.setColumnCount(4)
+        self.product_table.setHorizontalHeaderLabels(["Product", "Price", "Quantity", "ID (hidden)"])
         layout.addWidget(self.product_table)
 
-        # Quantity adjustment buttons
+        # Buttons for quantity change
         qty_btn_layout = QHBoxLayout()
         plus_btn = QPushButton("+")
         plus_btn.clicked.connect(lambda: self.adjust_quantity(1))
@@ -101,17 +99,40 @@ class RecordsTab(QWidget):
             WHERE b.date = ?
         """, (self.selected_date.strftime('%Y-%m-%d'),))
         bookings = cursor.fetchall()
-        conn.close()
+
+        room_income = 0
+        product_income = 0
 
         self.table.setRowCount(len(bookings))
-        total_income = 0
 
         for row_idx, booking in enumerate(bookings):
+            booking_id = booking[0]
+            room_total = booking[8]  # Room total cost
+
+            # Calculate product total per booking
+            cursor.execute("""
+                SELECT p.price, bp.quantity
+                FROM booking_products bp
+                JOIN products p ON bp.product_id = p.id
+                WHERE bp.booking_id = ?
+            """, (booking_id,))
+            product_rows = cursor.fetchall()
+            product_total = sum(price * qty for price, qty in product_rows)
+
+            room_income += room_total
+            product_income += product_total
+
+            # Populate row
             for col_idx, item in enumerate(booking):
                 self.table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
-            total_income += booking[8]
+            self.table.setItem(row_idx, 10, QTableWidgetItem(f"₱{product_total:.2f}"))  # Product Total column
 
-        self.summary_label.setText(f"Total Bookings: {len(bookings)} | Total Income: ₱{total_income:.2f}")
+        conn.close()
+
+        total_income = room_income + product_income
+        self.summary_label.setText(
+            f"Total Bookings: {len(bookings)} | Room Income: ₱{room_income:.2f} | Product Income: ₱{product_income:.2f} | Total Income: ₱{total_income:.2f}"
+        )
 
     def show_product_details(self, row, _):
         booking_id = int(self.table.item(row, 0).text())
@@ -132,12 +153,13 @@ class RecordsTab(QWidget):
         for row_idx, product in enumerate(products):
             for col_idx, item in enumerate(product[:3]):
                 self.product_table.setItem(row_idx, col_idx, QTableWidgetItem(str(item)))
-            self.product_table.setItem(row_idx, 3, QTableWidgetItem(str(product[3])))  # Hidden product ID
+            self.product_table.setItem(row_idx, 3, QTableWidgetItem(str(product[3])))  # Hidden Product ID
 
     def adjust_quantity(self, change):
         selected = self.product_table.currentRow()
         if selected == -1 or self.selected_booking_id is None:
             return
+
         product_id = int(self.product_table.item(selected, 3).text())
         quantity = int(self.product_table.item(selected, 2).text())
         new_qty = quantity + change
@@ -154,7 +176,9 @@ class RecordsTab(QWidget):
             """, (new_qty, self.selected_booking_id, product_id))
         conn.commit()
         conn.close()
+
         self.show_product_details(self.table.currentRow(), 0)
+        self.load_data()  # Refresh summary + per booking total
 
     def add_product_popup(self):
         if self.selected_booking_id is None:
@@ -178,7 +202,7 @@ class RecordsTab(QWidget):
             product_name = product_cb.currentText()
             quantity = qty_input.text()
             if not quantity.isdigit() or int(quantity) <= 0:
-                QMessageBox.warning(self, "Invalid Input", "Enter valid quantity.")
+                QMessageBox.warning(self, "Invalid Input", "Enter a valid quantity.")
                 return
 
             quantity = int(quantity)
@@ -203,7 +227,9 @@ class RecordsTab(QWidget):
             conn.commit()
             conn.close()
             dialog.accept()
+
             self.show_product_details(self.table.currentRow(), 0)
+            self.load_data()  # Refresh summary + per booking total
 
         save_btn = QPushButton("Add")
         save_btn.clicked.connect(save_product)

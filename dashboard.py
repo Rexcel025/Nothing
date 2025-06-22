@@ -6,10 +6,10 @@ from calendar_view import CalendarView
 from records import RecordsTab
 from checked_in_tab import CheckedInTab
 from product_management import ProductManagement
-
-from room_management import show_room_management
+from room_management import RoomManagement  # import the new class
 from room_map import RoomMap
 from register import RegisterWidget
+from reserved_tab import ReservedTab
 
 class Dashboard(QMainWindow):
     def __init__(self, role):
@@ -40,7 +40,7 @@ class Dashboard(QMainWindow):
         self.add_sidebar_button("Calendar", self.show_calendar)
         self.add_sidebar_button("Records", self.show_records)
         self.add_sidebar_button("Checked-In Customers", self.show_checked_in)
-
+        self.add_sidebar_button("Reserved Customers", self.show_reserved) 
         if self.role == "admin":
             self.add_sidebar_button("Register New User", self.show_register)
             self.add_sidebar_button("Product Management", self.show_product_management)
@@ -173,10 +173,17 @@ class Dashboard(QMainWindow):
         product_widget = ProductManagement()
         self.main_area.addWidget(product_widget)
 
+
     def show_rooms(self):
         self.clear_main_area()
-        room_widget = show_room_management()
+        room_widget = RoomManagement()  # instantiate the widget class
         self.main_area.addWidget(room_widget)
+        
+    def show_reserved(self):
+        self.clear_main_area()  # Clear the main area like other pages
+        reserved_widget = ReservedTab()  # Create ReservedTab instance
+        self.main_area.addWidget(reserved_widget)  # Show in the main area
+
 
 def open_dashboard(role):
     app = QApplication(sys.argv)
