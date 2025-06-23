@@ -58,56 +58,64 @@ class Dashboard(QMainWindow):
         self.apply_dark_mode()
 
     def apply_dark_mode(self):
-            dark_stylesheet = """
-                QWidget {
-                    background-color: #2b2b2b;
-                    color: #f0f0f0;
-                    font-family: 'Segoe UI', sans-serif;
-                    font-size: 11pt;
-                }
-                QPushButton {
-                    background-color: #3c3f41;
-                    color: #ffffff;
-                    border: 1px solid #5c5c5c;
-                    border-radius: 4px;
-                    padding: 6px;
-                }
-                QPushButton:hover {
-                    background-color: #505354;
-                }
-                QPushButton:pressed {
-                    background-color: #282828;
-                }
-                QLabel {
-                    color: #f0f0f0;
-                }
-                /* Calendar Widget */
-                QCalendarWidget QWidget {
-                    alternate-background-color: #3c3f41;
-                    background-color: #2b2b2b;
-                }
-                QCalendarWidget QAbstractItemView:enabled {
-                    color: #f0f0f0;
-                    background-color: #2b2b2b;
-                    selection-background-color: #505354;
-                    selection-color: #ffffff;
-                }
-                QCalendarWidget QToolButton {
-                    background-color: #3c3f41;
-                    color: #f0f0f0;
-                    border: none;
-                    margin: 5px;
-                }
-                QCalendarWidget QToolButton:hover {
-                    background-color: #505354;
-                }
-                QCalendarWidget QSpinBox {
-                    background-color: #3c3f41;
-                    color: #f0f0f0;
-                    border: none;
-                }
-            """
-            self.setStyleSheet(dark_stylesheet)
+        dark_stylesheet = """
+            QWidget {
+                background-color: #2b2b2b;
+                color: #f0f0f0;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11pt;
+            }
+            QPushButton {
+                background-color: #3c3f41;
+                color: #ffffff;
+                border: 1px solid #5c5c5c;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            QPushButton:hover {
+                background-color: #505354;
+            }
+            QPushButton:pressed {
+                background-color: #282828;
+            }
+            QLabel {
+                color: #f0f0f0;
+            }
+            /* Calendar Widget */
+            QCalendarWidget QWidget {
+                alternate-background-color: #3c3f41;
+                background-color: #2b2b2b;
+            }
+            QCalendarWidget QAbstractItemView:enabled {
+                color: #f0f0f0;
+                background-color: #2b2b2b;
+                selection-background-color: #505354;
+                selection-color: #ffffff;
+            }
+            QCalendarWidget QToolButton {
+                background-color: #3c3f41;
+                color: #f0f0f0;
+                border: none;
+                margin: 5px;
+            }
+            QCalendarWidget QToolButton:hover {
+                background-color: #505354;
+            }
+            QCalendarWidget QSpinBox {
+                background-color: #3c3f41;
+                color: #f0f0f0;
+                border: none;
+            }
+            /* Table Header */
+            QHeaderView::section {
+                background-color: #3c3f41;
+                color: #f0f0f0;
+                padding: 4px;
+                border: 1px solid #5c5c5c;
+            }
+        """
+        self.setStyleSheet(dark_stylesheet)
+
 
     def add_sidebar_button(self, text, function):
         btn = QPushButton(text)

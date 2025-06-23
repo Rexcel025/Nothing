@@ -11,6 +11,8 @@ from database import initialize_db, seed_initial_data
 class LoginWindow(QMainWindow):
     initialize_db()
     seed_initial_data()
+
+
     def __init__(self):
         super().__init__()
 
