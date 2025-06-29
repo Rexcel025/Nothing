@@ -58,7 +58,7 @@ class RoomManagement(QWidget):
         main_layout.addWidget(self.room_list)
 
         self.setLayout(main_layout)
-        self.setStyleSheet("background-color: #2b2b2b; color: #f0f0f0;")
+
 
     def load_rooms(self):
         self.room_list.clear()

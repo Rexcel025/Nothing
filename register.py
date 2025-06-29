@@ -1,3 +1,10 @@
+# register.py
+# This file implements the RegisterWidget, which allows users to register new users in the system.
+# It includes fields for username, password, and role, and displays a list of existing users
+# for management. The widget uses PyQt5 for the GUI and interacts with a SQLite database
+# for user management. It includes functionality to add new users, check for existing usernames,
+# and remove users from the system. Passwords are hashed using bcrypt for security.
+# The database operations are handled in the database.py file.
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
     QComboBox, QMessageBox, QListWidget

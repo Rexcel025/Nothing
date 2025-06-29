@@ -1,3 +1,8 @@
+# database.py
+# This file handles the database operations for the hotel management system.
+# It includes functions to connect to the database, manage users, bookings, rooms, and products
+# It also initializes the database and seeds it with initial data.
+# The database is implemented using SQLite.         
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -135,6 +140,27 @@ def check_booking_conflict(room_no, new_checkin_dt, new_checkout_dt, booking_id_
 
     return False  # No conflict
 
+
+
+def get_bookings_for_room_and_date(room_no, date):
+    """
+    Returns a list of (customer_name, checkout_date, checkout_time, status) for
+    the given room_no and date, where status is 'checked in' or 'reserved'.
+    """
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT customer_name, checkout_date, checkout_time, status
+        FROM bookings
+        WHERE room_no = ?
+          AND date <= ?
+          AND checkout_date >= ?
+          AND status IN ('checked in', 'reserved')
+        ORDER BY status DESC, checkout_date, checkout_time
+    """, (room_no, date, date))
+    results = cursor.fetchall()
+    conn.close()
+    return results
 
 
 def save_booking(date, room_no, name, checkin, checkout_date, checkout_time, status):

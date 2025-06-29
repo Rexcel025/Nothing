@@ -1,3 +1,6 @@
+#room_update.py
+# This file implements the RoomUpdate widget, which allows users to update room booking details.
+# It includes fields for customer name, check-in and check-out times, check-out date,       
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QDateEdit,
     QLineEdit, QMessageBox

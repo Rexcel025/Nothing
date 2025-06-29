@@ -1,143 +1,103 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
+from PyQt5.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel,
+    QHBoxLayout, QFrame
+)
 from PyQt5.QtCore import Qt
-import sys
 from room_update import RoomUpdate
 from calendar_view import CalendarView
 from records import RecordsTab
 from checked_in_tab import CheckedInTab
 from product_management import ProductManagement
-from room_management import RoomManagement  # import the new class
+from room_management import RoomManagement
 from room_map import RoomMap
 from register import RegisterWidget
 from reserved_tab import ReservedTab
 
+
+from login import LoginWindow  
+
 class Dashboard(QMainWindow):
-    def __init__(self, role):
+    def __init__(self, role, login_window_class=LoginWindow):
         super().__init__()
         self.setWindowTitle("Apolonia Hotel System Dashboard")
-        self.setGeometry(100, 100, 1000, 600)
-
+        self.setGeometry(100, 100, 1100, 700)
         self.role = role
         self.selected_date = None
+        self.login_window_class = login_window_class  
 
         # Main container widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Main layout
         main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0,0,0,0)
 
         # Sidebar
-        self.sidebar = QVBoxLayout()
-        self.sidebar.setAlignment(Qt.AlignTop)
-        main_layout.addLayout(self.sidebar, 1)  # 1 = sidebar width weight
+        sidebar = QFrame()
+        sidebar.setObjectName("Sidebar")
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setAlignment(Qt.AlignTop)
+        main_layout.addWidget(sidebar, 0)
 
-        # Main Area
-        self.main_area = QVBoxLayout()
-        main_layout.addLayout(self.main_area, 4)  # 4 = main area width weight
-
-        # Add sidebar buttons
-        self.add_sidebar_button("Calendar", self.show_calendar)
-        self.add_sidebar_button("Records", self.show_records)
-        self.add_sidebar_button("Checked-In Customers", self.show_checked_in)
-        self.add_sidebar_button("Reserved Customers", self.show_reserved) 
+        # Sidebar Buttons
+        self.sidebar_buttons = []
+        self.sidebar_btn_data = [
+            ("Calendar", self.show_calendar),
+            ("Records", self.show_records),
+            ("Checked-In Customers", self.show_checked_in),
+            ("Reserved Customers", self.show_reserved)
+        ]
         if self.role == "admin":
-            self.add_sidebar_button("Register New User", self.show_register)
-            self.add_sidebar_button("Product Management", self.show_product_management)
-            self.add_sidebar_button("Room Management", self.show_rooms)
+            self.sidebar_btn_data += [
+                ("Register New User", self.show_register),
+                ("Product Management", self.show_product_management),
+                ("Room Management", self.show_rooms)
+            ]
 
-        # Logout Button
-        logout_btn = QPushButton("Logout")
-        logout_btn.clicked.connect(self.close)
-        self.sidebar.addWidget(logout_btn)
+        self.sidebar_btn_data.append(("Logout", self.logout_action))
 
-        # Default view
+        for text, func in self.sidebar_btn_data:
+            btn = QPushButton(text)
+            btn.clicked.connect(func)
+            sidebar_layout.addWidget(btn)
+            self.sidebar_buttons.append(btn)
+
+        # Main Content Area 
+        self.card_widget = QWidget()
+        self.card_widget.setObjectName("Card")
+        self.card_layout = QVBoxLayout(self.card_widget)
+        self.card_layout.setAlignment(Qt.AlignTop)
+        main_layout.addWidget(self.card_widget, 1)
+
+        # Title at the top of the content area
+        self.main_title = QLabel("Apolonia Hotel System Dashboard")
+        self.main_title.setObjectName("MainTitle")
+        self.card_layout.addWidget(self.main_title)
+
+        # Placeholder for the first view
         self.show_placeholder("Welcome to Apolonia Hotel System!")
 
-        # Apply Dark Mode to the entire Dashboard
-        self.apply_dark_mode()
+    def set_main_title(self, text):
+        self.main_title.setText(text)
 
-    def apply_dark_mode(self):
-        dark_stylesheet = """
-            QWidget {
-                background-color: #2b2b2b;
-                color: #f0f0f0;
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 11pt;
-            }
-            QPushButton {
-                background-color: #3c3f41;
-                color: #ffffff;
-                border: 1px solid #5c5c5c;
-                border-radius: 4px;
-                padding: 6px;
-            }
-            QPushButton:hover {
-                background-color: #505354;
-            }
-            QPushButton:pressed {
-                background-color: #282828;
-            }
-            QLabel {
-                color: #f0f0f0;
-            }
-            /* Calendar Widget */
-            QCalendarWidget QWidget {
-                alternate-background-color: #3c3f41;
-                background-color: #2b2b2b;
-            }
-            QCalendarWidget QAbstractItemView:enabled {
-                color: #f0f0f0;
-                background-color: #2b2b2b;
-                selection-background-color: #505354;
-                selection-color: #ffffff;
-            }
-            QCalendarWidget QToolButton {
-                background-color: #3c3f41;
-                color: #f0f0f0;
-                border: none;
-                margin: 5px;
-            }
-            QCalendarWidget QToolButton:hover {
-                background-color: #505354;
-            }
-            QCalendarWidget QSpinBox {
-                background-color: #3c3f41;
-                color: #f0f0f0;
-                border: none;
-            }
-            /* Table Header */
-            QHeaderView::section {
-                background-color: #3c3f41;
-                color: #f0f0f0;
-                padding: 4px;
-                border: 1px solid #5c5c5c;
-            }
-        """
-        self.setStyleSheet(dark_stylesheet)
-
-
-    def add_sidebar_button(self, text, function):
-        btn = QPushButton(text)
-        btn.clicked.connect(function)
-        self.sidebar.addWidget(btn)
-
-    def clear_main_area(self):
-        for i in reversed(range(self.main_area.count())):
-            widget_to_remove = self.main_area.itemAt(i).widget()
-            if widget_to_remove is not None:
-                widget_to_remove.setParent(None)
+    def clear_card(self):
+        # Remove all widgets in card except title
+        while self.card_layout.count() > 1:
+            item = self.card_layout.takeAt(1)
+            if item.widget():
+                item.widget().setParent(None)
 
     def show_placeholder(self, text):
-        self.clear_main_area()
+        self.clear_card()
         label = QLabel(text)
         label.setAlignment(Qt.AlignCenter)
-        self.main_area.addWidget(label)
+        self.card_layout.addWidget(label)
 
     def show_calendar(self):
-        self.clear_main_area()
-        self.calendar_widget = CalendarView(self.on_day_selected)
-        self.main_area.addWidget(self.calendar_widget)
+        self.clear_card()
+        self.set_main_title("Calendar")
+        calendar_widget = CalendarView(self.on_day_selected)
+        self.card_layout.addWidget(calendar_widget)
 
     def on_day_selected(self, year, month, day):
         selected_date = f"{year}-{month:02d}-{day:02d}"
@@ -146,55 +106,54 @@ class Dashboard(QMainWindow):
         self.show_room_map_for_date(selected_date)
 
     def show_room_map_for_date(self, date):
-        print("Room Map Date:", date)
+        self.clear_card()
+        self.set_main_title(f"Room Map: {date}")
         room_map_widget = RoomMap(parent=None, date=date, on_room_click=self.on_room_click)
-        self.clear_main_area()
-        self.main_area.addWidget(room_map_widget)
-
-
+        self.card_layout.addWidget(room_map_widget)
 
     def on_room_click(self, date, room_no):
-        print(f"Clicked Room {room_no} on {date}")
         self.room_update_window = RoomUpdate(date, room_no, refresh_callback=lambda: self.show_room_map_for_date(date))
         self.room_update_window.show()
 
-
     def show_records(self):
-        self.clear_main_area()
+        self.clear_card()
+        self.set_main_title("Booking Records")
         records_widget = RecordsTab(self.role)
-        self.main_area.addWidget(records_widget)
+        self.card_layout.addWidget(records_widget)
 
     def show_checked_in(self):
-        self.clear_main_area()
+        self.clear_card()
+        self.set_main_title("Checked-In Customers")
         checked_in_widget = CheckedInTab()
-        self.main_area.addWidget(checked_in_widget)
+        self.card_layout.addWidget(checked_in_widget)
 
     def show_register(self):
-        self.clear_main_area()
+        self.clear_card()
+        self.set_main_title("Register New User")
         register_widget = RegisterWidget()
-        self.main_area.addWidget(register_widget)
-
-
+        self.card_layout.addWidget(register_widget)
 
     def show_product_management(self):
-        self.clear_main_area()
+        self.clear_card()
+        self.set_main_title("Product Management")
         product_widget = ProductManagement()
-        self.main_area.addWidget(product_widget)
-
+        self.card_layout.addWidget(product_widget)
 
     def show_rooms(self):
-        self.clear_main_area()
-        room_widget = RoomManagement()  # instantiate the widget class
-        self.main_area.addWidget(room_widget)
-        
+        self.clear_card()
+        self.set_main_title("Room Management")
+        room_widget = RoomManagement()
+        self.card_layout.addWidget(room_widget)
+
     def show_reserved(self):
-        self.clear_main_area()  # Clear the main area like other pages
-        reserved_widget = ReservedTab()  # Create ReservedTab instance
-        self.main_area.addWidget(reserved_widget)  # Show in the main area
+        self.clear_card()
+        self.set_main_title("Reserved Customers")
+        reserved_widget = ReservedTab()
+        self.card_layout.addWidget(reserved_widget)
 
 
-def open_dashboard(role):
-    app = QApplication(sys.argv)
-    window = Dashboard(role)
-    window.show()
-    sys.exit(app.exec_())
+    def logout_action(self):
+        from login import LoginWindow
+        self.login_window = LoginWindow()
+        self.login_window.show()
+        self.close()

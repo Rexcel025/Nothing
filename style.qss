@@ -1,0 +1,208 @@
+/* ------ GLOBAL FONT & BACKGROUND ------ */
+QWidget {
+    background-color: #21242b;
+    color: #eaeaea;
+    font-family: 'Segoe UI', 'Inter', 'Noto Sans', Arial, sans-serif;
+    font-size: 12.5pt;
+}
+
+/* ------ SIDEBAR ------ */
+QFrame, QWidget#Sidebar, QVBoxLayout#sidebar {
+    background: #191b20;
+    border-radius: 16px;
+    padding: 8px 0;
+}
+
+QPushButton {
+    background: #292c32;
+    color: #eaeaea;
+    border-radius: 10px;
+    padding: 11px 0;
+    font-weight: 600;
+    font-size: 13.5pt;
+    border: none;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+}
+
+QPushButton:checked, QPushButton:pressed {
+    background: #383c45;
+    color: #f2f2fa;
+}
+QPushButton:hover {
+    background: #353841;
+    color: #fff;
+}
+
+QPushButton#Logout {
+    background: #23262b;
+    color: #eb6060;
+    font-weight: bold;
+}
+QPushButton#Logout:hover {
+    background: #322426;
+    color: #fff;
+}
+
+/* ------ MAIN AREA / CARD ------ */
+QFrame#Card {
+    background: #23262b;
+    border-radius: 20px;
+    padding: 20px 26px;
+    margin: 0 0 20px 0;
+    box-shadow: 0 3px 22px #0007;
+}
+
+QLabel, QCheckBox, QRadioButton {
+    color: #f2f2fa;
+    font-size: 13pt;
+}
+
+QLineEdit, QComboBox, QDateEdit, QTimeEdit {
+    background: #181a20;
+    color: #f3f3fa;
+    border: 1.2px solid #38415b;
+    border-radius: 7px;
+    padding: 6px 9px;
+    font-size: 12.5pt;
+    selection-background-color: #254269;
+    selection-color: #fff;
+}
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTimeEdit:focus {
+    border: 1.5px solid #38b2ac;
+    background: #23293a;
+}
+
+/* ------ TABLES ------ */
+QTableWidget, QTableView {
+    background: #22242a;
+    color: #d4d6dd;
+    border: none;
+    gridline-color: #32343d;
+    font-size: 12pt;
+    alternate-background-color: #1c1e24;
+    selection-background-color: #205089;
+    selection-color: #fff;
+    border-radius: 10px;
+}
+QHeaderView::section {
+    background: #22232a;
+    color: #b8bdd9;
+    font-size: 11pt;
+    border-radius: 10px;
+    padding: 8px 0;
+    border: none;
+    font-weight: bold;
+}
+
+/* ------ QCALENDARWIDGET ------ */
+QCalendarWidget {
+    background: #23262b;
+    border: none;
+    border-radius: 16px;
+}
+QCalendarWidget QTableView {
+    background: #23262b;
+    alternate-background-color: rgb(24, 35, 54);
+    color: #e6e6eb;
+    selection-background-color: #205089;
+    selection-color: #eaf0f7;
+    gridline-color: #333741;
+    border-radius: 10px;
+    border: none;
+}
+QCalendarWidget QHeaderView::section {
+    background-color: #2d3037;
+    color: #b8bdd9;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 0;
+}
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background: #252930;
+    color: #eaf0f7;
+    border-radius: 10px;
+    min-height: 38px;
+}
+QCalendarWidget QToolButton {
+    background: transparent;
+    color: #eaf0f7;
+    font-weight: bold;
+    font-size: 13px;
+    border-radius: 6px;
+    padding: 3px 7px;
+}
+QCalendarWidget QToolButton:pressed {
+    background: rgb(23, 42, 68);
+}
+
+/* ---- MAIN FIX: CALENDAR DAY TILE COLOR ---- */
+QCalendarWidget QAbstractItemView:enabled {
+    background:rgb(24, 33, 49);  /* Fixed! Use the same as your tile, not transparent */
+    color: #eaf0f7;
+    selection-background-color: #205089;
+    selection-color: #fff;
+}
+QCalendarWidget QAbstractItemView:disabled {
+    color: #393d45;
+    background: #21242b;
+}
+/* Removed this redundant/unused rule:
+QCalendarWidget QTableView QAbstractItemView::item:!enabled {
+    color: rgb(21, 57, 119);
+}
+*/
+QCalendarWidget QWidget#qt_calendar_today {
+    border: 1.8px solid #38b2ac;
+    border-radius: 9px;
+    background: #202a33;
+    color: #fff;
+}
+
+/* ------ SCROLLBAR ------ */
+QScrollBar:vertical, QScrollBar:horizontal {
+    background: #21242b;
+    border-radius: 8px;
+    width: 13px;
+    margin: 3px 0 3px 0;
+}
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: #343943;
+    border-radius: 8px;
+    min-height: 28px;
+}
+QScrollBar::handle:hover {
+    background: #565a65;
+}
+QScrollBar::add-line, QScrollBar::sub-line { background: none; }
+
+/* ------ DIALOGS, TOOLTIP, ETC ------ */
+QDialog, QMessageBox {
+    background: #22242a;
+    color: #eee;
+    border-radius: 16px;
+}
+
+QToolTip {
+    background: #23293a;
+    color: #fff;
+    border: 1px solid #38415b;
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 12pt;
+}
+
+QTableWidget QHeaderView::section:vertical,
+QTableView QHeaderView::section:vertical {
+    background-color: #22232a;
+    color: #b8bdd9;
+    font-size: 11pt;
+    font-weight: 600;
+    border: none;
+    border-radius: 9px;
+    padding: 0 8px;
+    min-width: 28px;
+    /* Keep similar height as horizontal headers */
+}

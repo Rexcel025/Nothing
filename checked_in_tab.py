@@ -1,3 +1,10 @@
+# checked_in_tab.py
+# This file implements the CheckedInTab widget, which displays a list of checked-in customers
+# and allows the user to extend bookings or check out customers.
+# It includes a table to show booking details and buttons for actions.
+# It uses PyQt5 for the GUI and interacts with a SQLite database for booking management.
+# It also includes functionality to check for booking conflicts when extending a booking.
+# The database operations are handled in the database.py file.
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QDateEdit, QTimeEdit
 from PyQt5.QtCore import Qt, QDate, QTime
 from datetime import datetime
@@ -19,6 +26,7 @@ class CheckedInTab(QWidget):
         self.table.setHorizontalHeaderLabels(["ID", "Date", "Room", "Name", "Check-In", "Check-Out Time", "Check-Out Date", "Status", "Total Cost", "Current Status"])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.layout.addWidget(self.table)
+        self.table.verticalHeader().setVisible(False)
 
         # Buttons
         button_layout = QHBoxLayout()

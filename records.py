@@ -1,8 +1,10 @@
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
-    QTableWidgetItem, QMessageBox, QComboBox, QDialog, QLineEdit, QDateEdit
+    QTableWidgetItem, QMessageBox, QComboBox, QDialog, QLineEdit, QDateEdit, QFileDialog
 )
 from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtPrintSupport import QPrinter  
+from PyQt5.QtGui import QTextDocument      
 from database import connect_db, get_all_products
 from datetime import datetime, timedelta
 
@@ -47,6 +49,8 @@ class RecordsTab(QWidget):
             "Check-Out Time", "Check-Out Date", "Status", "Room Cost", "Encoded By", "Product Total"
         ])
         self.table.cellClicked.connect(self.show_product_details)
+        self.table.verticalHeader().setVisible(False)
+
         layout.addWidget(self.table)
 
         # Summary
@@ -73,6 +77,11 @@ class RecordsTab(QWidget):
         add_product_btn = QPushButton("+ Add Product")
         add_product_btn.clicked.connect(self.add_product_popup)
         layout.addWidget(add_product_btn)
+
+        # Print/Save to PDF button
+        self.print_btn = QPushButton("Print/Save to PDF") 
+        self.print_btn.clicked.connect(self.print_to_pdf)   
+        layout.addWidget(self.print_btn)                   
 
     def date_changed(self, new_date):
         self.selected_date = new_date.toPyDate()
@@ -235,3 +244,51 @@ class RecordsTab(QWidget):
         save_btn.clicked.connect(save_product)
         layout.addWidget(save_btn)
         dialog.exec_()
+
+
+    def print_to_pdf(self):  
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save PDF", "", "PDF Files (*.pdf)", options=options
+        )
+        if not filename:
+            return
+
+        if not filename.lower().endswith('.pdf'):
+            filename += '.pdf'
+
+
+        html = "<h2>Booking Records for {}</h2>".format(self.selected_date.strftime('%Y-%m-%d'))
+        html += "<table border='1' cellspacing='0' cellpadding='4'><tr>"
+
+        headers = [
+            "ID", "Date", "Room", "Name", "Check-In Time",
+            "Check-Out Time", "Check-Out Date", "Status", "Room Cost", "Encoded By", "Product Total"
+        ]
+        for h in headers:
+            html += f"<th>{h}</th>"
+        html += "</tr>"
+
+        # Data rows
+        for row in range(self.table.rowCount()):
+            html += "<tr>"
+            for col in range(self.table.columnCount()):
+                item = self.table.item(row, col)
+                html += f"<td>{item.text() if item else ''}</td>"
+            html += "</tr>"
+        html += "</table>"
+
+        # Summary
+        html += f"<br><b>{self.summary_label.text()}</b>"
+
+
+        doc = QTextDocument()
+        doc.setHtml(html)
+
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setOutputFileName(filename)
+
+        doc.print_(printer)
+
+        QMessageBox.information(self, "Exported", f"PDF saved to:\n{filename}")

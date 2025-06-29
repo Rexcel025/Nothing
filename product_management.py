@@ -1,3 +1,4 @@
+# product_management.py
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
     QTableWidget, QTableWidgetItem, QDialog, QLineEdit, QMessageBox
@@ -24,24 +25,26 @@ class ProductManagement(QWidget):
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["ID", "Name", "Price"])
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #2b2b2b;
-                color: #f0f0f0;
-                gridline-color: #444;
-                border: 1px solid #444;
-            }
-            QHeaderView::section {
-                background-color: #444;
-                color: #f0f0f0;
-                padding: 4px;
-                border: 1px solid #666;
-            }
-            QTableWidget::item {
-                selection-background-color: #555;
-                selection-color: #ffffff;
-            }
-        """)
+        self.table.verticalHeader().setVisible(False)
+
+        #self.table.setStyleSheet("""
+            #QTableWidget {
+                #background-color: #2b2b2b;
+                #color: #f0f0f0;
+                #gridline-color: #444;
+                #border: 1px solid #444;
+            #}
+            #QHeaderView::section {
+                #background-color: #444;
+                #color: #f0f0f0;
+                #padding: 4px;
+                #border: 1px solid #666;
+            #}
+            #QTableWidget::item {
+                #selection-background-color: #555;
+                #selection-color: #ffffff;
+            #}
+        #""")
 
         main_layout.addWidget(self.table)
 

@@ -1,3 +1,10 @@
+# reserved_tab.py
+# This file implements the ReservedTab widget, which displays a list of reserved customers
+# and allows the user to perform actions like early check-in, extending bookings, and checking out
+# customers. It includes a table to show booking details and buttons for actions.
+# It uses PyQt5 for the GUI and interacts with a SQLite database for booking management.
+# It also includes functionality to check for booking conflicts when performing actions.
+# The database operations are handled in the database.py file.
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QDateEdit, QTimeEdit
 )
@@ -24,6 +31,7 @@ class ReservedTab(QWidget):
         ])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.layout.addWidget(self.table)
+        self.table.verticalHeader().setVisible(False)
 
         # Buttons
         button_layout = QHBoxLayout()
