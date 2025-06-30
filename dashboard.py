@@ -3,6 +3,9 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QFrame
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+
+from photos_tab import PhotosTab
 from room_update import RoomUpdate
 from calendar_view import CalendarView
 from records import RecordsTab
@@ -13,8 +16,7 @@ from room_map import RoomMap
 from register import RegisterWidget
 from reserved_tab import ReservedTab
 
-
-from login import LoginWindow  
+from login import LoginWindow
 
 class Dashboard(QMainWindow):
     def __init__(self, role, login_window_class=LoginWindow):
@@ -23,14 +25,14 @@ class Dashboard(QMainWindow):
         self.setGeometry(100, 100, 1100, 700)
         self.role = role
         self.selected_date = None
-        self.login_window_class = login_window_class  
+        self.login_window_class = login_window_class
 
         # Main container widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(0,0,0,0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
         # Sidebar
         sidebar = QFrame()
@@ -45,7 +47,8 @@ class Dashboard(QMainWindow):
             ("Calendar", self.show_calendar),
             ("Records", self.show_records),
             ("Checked-In Customers", self.show_checked_in),
-            ("Reserved Customers", self.show_reserved)
+            ("Reserved Customers", self.show_reserved),
+            ("Photos", self.show_photos)  # <-- Add Photos here
         ]
         if self.role == "admin":
             self.sidebar_btn_data += [
@@ -62,7 +65,20 @@ class Dashboard(QMainWindow):
             sidebar_layout.addWidget(btn)
             self.sidebar_buttons.append(btn)
 
-        # Main Content Area 
+        # -- ADD VERTICAL STRETCH (push logo to bottom) --
+        sidebar_layout.addStretch()
+
+        # -- ADD LOGO LABEL AT BOTTOM --
+        logo_label = QLabel()
+        pixmap = QPixmap("ApoloniaLogo.png")
+        if not pixmap.isNull():
+            pixmap = pixmap.scaledToWidth(160, Qt.SmoothTransformation)
+            logo_label.setPixmap(pixmap)
+        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setStyleSheet("margin-top: 18px; margin-bottom: 8px;")
+        sidebar_layout.addWidget(logo_label)
+
+        # Main Content Area
         self.card_widget = QWidget()
         self.card_widget.setObjectName("Card")
         self.card_layout = QVBoxLayout(self.card_widget)
@@ -81,7 +97,6 @@ class Dashboard(QMainWindow):
         self.main_title.setText(text)
 
     def clear_card(self):
-        # Remove all widgets in card except title
         while self.card_layout.count() > 1:
             item = self.card_layout.takeAt(1)
             if item.widget():
@@ -151,6 +166,11 @@ class Dashboard(QMainWindow):
         reserved_widget = ReservedTab()
         self.card_layout.addWidget(reserved_widget)
 
+    def show_photos(self):  # <-- Photos tab handler
+        self.clear_card()
+        self.set_main_title("Room Photos")
+        photos_widget = PhotosTab()
+        self.card_layout.addWidget(photos_widget)
 
     def logout_action(self):
         from login import LoginWindow

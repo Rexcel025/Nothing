@@ -48,7 +48,7 @@ class RoomMap(QWidget):
                 padding: 3px;
                 font-size: 9pt;
             """)
-            btn.setFixedSize(130, 80)
+            btn.setFixedSize(195, 120)
             btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
             # Standard left click behavior

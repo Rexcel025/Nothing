@@ -1,22 +1,33 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QToolTip, QVBoxLayout, QCalendarWidget, QTableView
-from PyQt5.QtCore import QDate, Qt
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QCalendarWidget, QTableView
+from PyQt5.QtCore import QDate, Qt, QTimer
 from calendar_ui import Ui_CalendarViewWidget
 from database import connect_db
-from PyQt5.QtCore import QTimer
-
-from PyQt5.QtWidgets import QCalendarWidget, QTableView, QLabel
-from PyQt5.QtCore import Qt, QTimer, QDate
 
 class CustomCalendarWidget(QCalendarWidget):
     def __init__(self, get_booked_reserved_count_func, parent=None):
         super().__init__(parent)
         self.get_booked_reserved_count_func = get_booked_reserved_count_func
         self._table_view = None
+        self._floating_label = None  # For pop-up tooltip
+
+        # Set table view style after widget is fully constructed
+        QTimer.singleShot(0, self.apply_tile_style)
         QTimer.singleShot(0, self.init_table_view)
-        self._floating_label = None  # Store reference
 
     def init_table_view(self):
         self._table_view = self.findChild(QTableView)
+
+    def apply_tile_style(self):
+        view = self.findChild(QTableView)
+        if view:
+            view.setStyleSheet("""
+                background: #fff;
+                color: #1E1E1E;
+                selection-background-color: #FFE28A;
+                selection-color: #337AB7;
+                alternate-background-color: #e7f3eb;
+                gridline-color: #dbe6df;
+            """)
 
     def contextMenuEvent(self, event):
         qdate = None
@@ -45,19 +56,19 @@ class CustomCalendarWidget(QCalendarWidget):
         # Create floating label
         self._floating_label = QLabel(msg, self)
         self._floating_label.setStyleSheet("""
-            background: #222; color: #fff;
-            border: 1px solid #888;
-            padding: 6px 14px;
-            border-radius: 7px;
+            background: #FFE28A;
+            color: #1E1E1E;
+            border: 1px solid #4C9F70;
+            padding: 8px 14px;
+            border-radius: 8px;
         """)
         self._floating_label.setWindowFlags(Qt.ToolTip)
         self._floating_label.adjustSize()
         self._floating_label.move(self.mapFromGlobal(event.globalPos()))
         self._floating_label.show()
 
-        # Auto-hide after 2.5 seconds (or adjust as you like)
+        # Auto-hide after 2.5 seconds
         QTimer.singleShot(2500, self._floating_label.close)
-
 
 class CalendarView(QWidget):
     def __init__(self, on_day_selected_callback):
@@ -66,7 +77,7 @@ class CalendarView(QWidget):
         self.ui.setupUi(self)
         self.on_day_selected_callback = on_day_selected_callback
 
-        # Replace the default QCalendarWidget with the custom one
+        # Replace the default QCalendarWidget with our custom one
         old_calendar = self.ui.calendarWidget
         layout = self.layout() or QVBoxLayout(self)
         layout.removeWidget(old_calendar)
@@ -79,7 +90,6 @@ class CalendarView(QWidget):
         self.ui.calendarWidget.setGridVisible(True)
         self.ui.calendarWidget.setVerticalHeaderFormat(self.ui.calendarWidget.NoVerticalHeader)
         self.ui.calendarWidget.setHorizontalHeaderFormat(self.ui.calendarWidget.SingleLetterDayNames)
-
 
         self.hide_overflow_days()
         self.ui.calendarWidget.currentPageChanged.connect(lambda: self.hide_overflow_days())
@@ -118,4 +128,5 @@ class CalendarView(QWidget):
                     date = index.data(0)
                     if isinstance(date, QDate):
                         if date.month() != this_month:
-                            view.setIndexWidget(index, QLabel(""))  
+                            view.setIndexWidget(index, QLabel(""))
+
