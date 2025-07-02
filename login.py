@@ -55,7 +55,7 @@ class LoginWindow(QMainWindow):
         self.register_button = QPushButton("Register ")
         self.register_button.setFixedWidth(160)
         self.register_button.clicked.connect(self.show_register_window)
-        self.register_button.setEnabled(True)
+        self.register_button.setEnabled(False)
         button_group.addWidget(self.register_button, alignment=Qt.AlignCenter)
 
         layout.addLayout(button_group)

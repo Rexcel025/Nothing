@@ -1,10 +1,10 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel,
-    QHBoxLayout, QFrame
+    QHBoxLayout, QFrame, 
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-
+from PyQt5.QtGui import QIcon
 from photos_tab import PhotosTab
 from room_update import RoomUpdate
 from calendar_view import CalendarView
@@ -21,11 +21,18 @@ from login import LoginWindow
 class Dashboard(QMainWindow):
     def __init__(self, role, login_window_class=LoginWindow):
         super().__init__()
+        icon = QIcon("app_icon.png")
+        icon = icon.pixmap(32, 32)  # Resize the icon to 32x32 if needed
+        self.setWindowIcon(QIcon(icon))
+
         self.setWindowTitle("Apolonia Hotel System Dashboard")
         self.setGeometry(100, 100, 1100, 700)
         self.role = role
         self.selected_date = None
         self.login_window_class = login_window_class
+        
+        # LOAD THE STYLESHEET - This fixes the black calendar tiles!
+        self.load_stylesheet()
 
         # Main container widget
         central_widget = QWidget()
@@ -92,6 +99,56 @@ class Dashboard(QMainWindow):
 
         # Placeholder for the first view
         self.show_placeholder("Welcome to Apolonia Hotel System!")
+
+    def load_stylesheet(self):
+        """Load and apply the CSS stylesheet"""
+        try:
+            with open('styles.css', 'r', encoding='utf-8') as file:
+                stylesheet = file.read()
+                self.setStyleSheet(stylesheet)
+                print("Stylesheet loaded successfully!")
+        except FileNotFoundError:
+            print("Warning: styles.css file not found - using default styling")
+            # Fallback: Apply basic calendar styling if CSS file is missing
+            self.apply_fallback_calendar_styles()
+        except Exception as e:
+            print(f"Error loading stylesheet: {e}")
+            self.apply_fallback_calendar_styles()
+
+    def apply_fallback_calendar_styles(self):
+        """Apply basic calendar styling if CSS file is not available"""
+        fallback_style = """
+        QCalendarWidget {
+            background: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        QCalendarWidget QTableView {
+            background: #ffffff;
+            color: #000000;
+            alternate-background-color: #f0f0f0;
+            selection-background-color: #3daee9;
+            selection-color: white;
+        }
+        QCalendarWidget QHeaderView::section {
+            background-color: #4C9F70;
+            color: white;
+            font-weight: bold;
+            border: none;
+            padding: 4px;
+        }
+        QCalendarWidget QWidget#qt_calendar_navigationbar {
+            background: #f0f0f0;
+        }
+        QCalendarWidget QToolButton {
+            background: white;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px;
+        }
+        """
+        self.setStyleSheet(fallback_style)
 
     def set_main_title(self, text):
         self.main_title.setText(text)

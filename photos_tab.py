@@ -21,7 +21,7 @@ class PhotosTab(QWidget):
 
         # List of image file paths
         photo_files = [
-            "2.jpg", "3.jpg", "4.jpg",  # replace with your actual images
+            "2.jpg", "3.jpg", "4.jpg",  
             "5.jpg", "6.jpg", "7.jpg", "8.jpg", "1.jpg"
         ]
         
@@ -31,7 +31,7 @@ class PhotosTab(QWidget):
             col = i % 4  # 4 columns
 
             pixmap = QPixmap(photo_file)
-            pixmap = pixmap.scaled(300, 200, Qt.KeepAspectRatio)  # Adjust size if necessary
+            pixmap = pixmap.scaled(300, 200, Qt.KeepAspectRatio)  
             photo_label = QLabel()
             photo_label.setPixmap(pixmap)
             photo_label.setAlignment(Qt.AlignCenter)

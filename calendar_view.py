@@ -8,7 +8,7 @@ class CustomCalendarWidget(QCalendarWidget):
         super().__init__(parent)
         self.get_booked_reserved_count_func = get_booked_reserved_count_func
         self._table_view = None
-        self._floating_label = None  # For pop-up tooltip
+        self._floating_label = None  
 
         # Set table view style after widget is fully constructed
         QTimer.singleShot(0, self.apply_tile_style)
@@ -77,7 +77,6 @@ class CalendarView(QWidget):
         self.ui.setupUi(self)
         self.on_day_selected_callback = on_day_selected_callback
 
-        # Replace the default QCalendarWidget with our custom one
         old_calendar = self.ui.calendarWidget
         layout = self.layout() or QVBoxLayout(self)
         layout.removeWidget(old_calendar)
